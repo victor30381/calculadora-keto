@@ -1,34 +1,56 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>KetoCost Bakery</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              rose: {
-                50: '#fff1f2',
-                100: '#ffe4e6',
-                200: '#fecdd3',
-                300: '#fda4af',
-                400: '#fb7185',
-                500: '#f43f5e',
-                600: '#e11d48',
-              },
-              cream: '#fffdd0',
-            }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>KetoCost Bakery</title>
+  <script>
+    window.onerror = function (message, source, lineno, colno, error) {
+      var div = document.createElement('div');
+      div.style.color = 'red';
+      div.style.backgroundColor = 'white';
+      div.style.padding = '20px';
+      div.style.margin = '20px';
+      div.style.border = '2px solid red';
+      div.style.position = 'fixed';
+      div.style.top = '0';
+      div.style.left = '0';
+      div.style.zIndex = '9999';
+      div.innerHTML = '<h3>Application Error</h3>' +
+        '<p><b>Message:</b> ' + message + '</p>' +
+        '<p><b>Source:</b> ' + source + '</p>' +
+        '<p><b>Line:</b> ' + lineno + '</p>';
+      document.body.prepend(div);
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            rose: {
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              200: '#fecdd3',
+              300: '#fda4af',
+              400: '#fb7185',
+              500: '#f43f5e',
+              600: '#e11d48',
+            },
+            cream: '#fffdd0',
           }
         }
       }
-    </script>
-<link rel="stylesheet" href="/index.css">
+    }
+  </script>
+  <link rel="stylesheet" href="/index.css">
   <script type="module" crossorigin src="/calculadora-keto/assets/index-BRmoUwVY.js"></script>
 </head>
-  <body class="bg-rose-50 text-slate-800">
-    <div id="root"></div>
+
+<body class="bg-rose-50 text-slate-800">
+  <div id="root"></div>
 </body>
+
 </html>
