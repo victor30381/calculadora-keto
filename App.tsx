@@ -100,7 +100,7 @@ function App() {
 
   // MAIN APP
   return (
-    <div className="min-h-screen bg-rose-50 pb-24 md:pb-0 md:pt-20">
+    <div className="min-h-screen bg-rose-50 pb-24 md:pb-0 md:pt-20 flex flex-col">
       {/* Header Mobile (Sticky Top) */}
       <div className="md:hidden sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-rose-100 p-4 flex justify-between items-center shadow-sm">
         <h1 className="text-xl font-bold text-rose-500">Calculadora Keto 🍰</h1>
@@ -121,7 +121,7 @@ function App() {
       </div>
 
       {/* Main Content Area */}
-      <main className="max-w-3xl mx-auto p-4 md:p-8">
+      <main className="max-w-3xl mx-auto p-4 md:p-8 flex-grow flex flex-col justify-center w-full">
         {activeTab === 'inventory' && <Ingredients userId={user.uid} />}
         {activeTab === 'recipes' && <Recipes userId={user.uid} />}
         {activeTab === 'calc' && <Calculator userId={user.uid} />}

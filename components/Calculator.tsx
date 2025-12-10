@@ -51,48 +51,39 @@ const Calculator: React.FC<Props> = ({ userId }) => {
       format: [80, 150]
     });
 
-    const img = new Image();
-    img.src = '/logo.png';
-
-    img.onload = () => {
-      // Logo styling
-      doc.addImage(img, 'PNG', 20, 10, 40, 40);
-
+    const drawContent = (withLogo: boolean) => {
       // Header
+      const headerY = withLogo ? 55 : 20;
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("Alternativa Keto", 40, 55, { align: "center" });
+      doc.text("Alternativa Keto", 40, headerY, { align: "center" });
 
       // Divider
       doc.setFontSize(8);
-      doc.text("----------------------------------------", 40, 60, { align: "center" });
+      doc.text("----------------------------------------", 40, headerY + 5, { align: "center" });
 
       // Product Details
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      // Handle long names by splitting lines if necessary, currently just centered
-      doc.text(selectedRecipe.name, 40, 70, { align: "center", maxWidth: 70 });
+      doc.text(selectedRecipe.name, 40, headerY + 15, { align: "center", maxWidth: 70 });
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`${weight} g`, 40, 80, { align: "center" });
+      doc.text(`${weight} g`, 40, headerY + 25, { align: "center" });
 
       // Price
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
-      doc.text(`$${suggestedPrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 40, 95, { align: "center" });
+      doc.text(`$${suggestedPrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 40, headerY + 40, { align: "center" });
 
       // Footer
       doc.setFontSize(8);
       doc.setFont("helvetica", "italic");
-      doc.text("¡Gracias por su compra!", 40, 110, { align: "center" });
+      doc.text("¡Gracias por su compra!", 40, headerY + 55, { align: "center" });
 
       // Instagram Icon & Handle
-      // Draw centralized block: Icon (5mm) + Gap (1mm) + Text (~25mm) = Total ~31mm centered.
-      // Start X approx: 40 - (31/2) = 24.5
-
       const startX = 25;
-      const iconY = 113;
+      const iconY = headerY + 58;
 
       // Icon Background (Rounded Rect)
       doc.setDrawColor(0);
@@ -113,18 +104,17 @@ const Calculator: React.FC<Props> = ({ userId }) => {
       doc.save(`${selectedRecipe.name.replace(/\s+/g, '_')}_ticket.pdf`);
     };
 
+    const img = new Image();
+    // Use proper base URL for GitHub Pages
+    img.src = `${import.meta.env.BASE_URL}logo.png`;
+
+    img.onload = () => {
+      doc.addImage(img, 'PNG', 20, 10, 40, 40);
+      drawContent(true);
+    };
+
     img.onerror = () => {
-      // Fallback if image fails
-      doc.setFontSize(14);
-      doc.text("Alternativa Keto", 40, 20, { align: "center" });
-
-      doc.setFontSize(12);
-      doc.text(selectedRecipe.name, 40, 40, { align: "center" });
-      doc.text(`${weight} g`, 40, 50, { align: "center" });
-      doc.setFontSize(18);
-      doc.text(`$${suggestedPrice.toLocaleString()}`, 40, 65, { align: "center" });
-
-      doc.save(`${selectedRecipe.name}_ticket.pdf`);
+      drawContent(false);
     };
   };
 
