@@ -5,28 +5,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>KetoCost Bakery</title>
-  <script>
-    window.onerror = function (message, source, lineno, colno, error) {
-      setTimeout(function () {
-        var div = document.createElement('div');
-        div.style.color = 'red';
-        div.style.backgroundColor = 'white';
-        div.style.padding = '20px';
-        div.style.margin = '20px';
-        div.style.border = '2px solid red';
-        div.style.position = 'fixed';
-        div.style.top = '0';
-        div.style.left = '0';
-        div.style.zIndex = '9999';
-        div.style.fontFamily = 'monospace';
-        div.innerHTML = '<h3 style="margin-top:0">Application Error</h3>' +
-          '<p><b>Msg:</b> ' + message + '</p>' +
-          '<p><b>Src:</b> ' + source + '</p>' +
-          '<p><b>Line:</b> ' + lineno + '</p>';
-        document.body.appendChild(div);
-      }, 500); // Wait for body
-    };
-  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -53,10 +31,7 @@
 </head>
 
 <body class="bg-rose-50 text-slate-800">
-  <div id="root" class="flex items-center justify-center min-h-screen text-rose-500 font-bold p-4 text-center">
-    Cargando aplicación...<br>
-    (Si ves esto, el HTML cargó pero el JS no inició)
-  </div>
+  <div id="root"></div>
 </body>
 
 </html>
