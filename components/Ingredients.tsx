@@ -11,6 +11,7 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [name, setName] = useState('');
   const [unit, setUnit] = useState<Unit>(Unit.KG);
+  const [quantity, setQuantity] = useState('1');
   const [price, setPrice] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -18,7 +19,7 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
   useEffect(() => {
     const q = query(collection(db, 'ingredients'), where('userId', '==', userId));
     const unsubscribe = onSnapshot(
-      q, 
+      q,
       (snapshot: QuerySnapshot<DocumentData>) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ingredient));
         // Sort alphabetically
@@ -51,10 +52,14 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
     }
 
     try {
+      const qty = parseFloat(quantity) || 1;
+      const totalPkgPrice = parseFloat(price);
+
       const ingredientData = {
         name: trimmedName,
         unit,
-        pricePerUnit: parseFloat(price),
+        quantity: qty,
+        pricePerUnit: totalPkgPrice / qty,
         userId
       };
 
@@ -78,7 +83,11 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
   const handleEdit = (ing: Ingredient) => {
     setName(ing.name);
     setUnit(ing.unit);
-    setPrice(ing.pricePerUnit.toString());
+    // Default quantity to 1 for existing items without it
+    const qty = ing.quantity || 1;
+    setQuantity(qty.toString());
+    // Show total package price (unit price * count)
+    setPrice((ing.pricePerUnit * qty).toString());
     setEditingId(ing.id);
   };
 
@@ -96,6 +105,7 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
   const resetForm = () => {
     setName('');
     setUnit(Unit.KG);
+    setQuantity('1');
     setPrice('');
     setEditingId(null);
     setError('');
@@ -122,13 +132,24 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-1">Unidad de Compra</label>
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value as Unit)}
-                className="w-full p-3 rounded-xl border border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-gray-50 text-black"
-              >
-                {Object.values(Unit).map(u => <option key={u} value={u}>{u}</option>)}
-              </select>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  step="any"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="w-24 p-3 rounded-xl border border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-400 text-black bg-gray-50 placeholder-gray-400"
+                  placeholder="Cant."
+                  required
+                />
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value as Unit)}
+                  className="flex-1 p-3 rounded-xl border border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-gray-50 text-black"
+                >
+                  {Object.values(Unit).map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-1">Precio</label>

@@ -10,6 +10,7 @@ export interface Ingredient {
   userId: string;
   name: string;
   unit: Unit;
+  quantity?: number;
   pricePerUnit: number;
 }
 

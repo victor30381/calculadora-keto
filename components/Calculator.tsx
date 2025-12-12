@@ -53,53 +53,61 @@ const Calculator: React.FC<Props> = ({ userId }) => {
 
     const drawContent = (withLogo: boolean) => {
       // Header
-      const headerY = withLogo ? 55 : 20;
-      doc.setFontSize(10);
+      // Adjusted Y position for larger logo
+      const headerY = withLogo ? 62 : 20;
+
+      // Shop Name
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("Alternativa Keto", 40, headerY, { align: "center" });
 
       // Divider
-      doc.setFontSize(8);
-      doc.text("----------------------------------------", 40, headerY + 5, { align: "center" });
+      doc.setFontSize(10);
+      doc.text("----------------------------------------", 40, headerY + 6, { align: "center" });
 
       // Product Details
-      doc.setFontSize(12);
+      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text(selectedRecipe.name, 40, headerY + 15, { align: "center", maxWidth: 70 });
+      // Increased maxWidth to avoid wrapping too early on larger text
+      doc.text(selectedRecipe.name, 40, headerY + 20, { align: "center", maxWidth: 75 });
 
-      doc.setFontSize(10);
+      doc.setFontSize(14);
       doc.setFont("helvetica", "normal");
-      doc.text(`${weight} g`, 40, headerY + 25, { align: "center" });
+      doc.text(`${weight} g`, 40, headerY + 30, { align: "center" });
 
       // Price
-      doc.setFontSize(18);
+      doc.setFontSize(26);
       doc.setFont("helvetica", "bold");
-      doc.text(`$${suggestedPrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 40, headerY + 40, { align: "center" });
+      doc.text(`$${suggestedPrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 40, headerY + 48, { align: "center" });
 
       // Footer
-      doc.setFontSize(8);
+      doc.setFontSize(12);
       doc.setFont("helvetica", "italic");
-      doc.text("¡Gracias por su compra!", 40, headerY + 55, { align: "center" });
+      doc.text("¡Gracias por su compra!", 40, headerY + 68, { align: "center" });
 
       // Instagram Icon & Handle
-      const startX = 25;
-      const iconY = headerY + 58;
+      // Centering logic approx: Icon (7mm) + Gap (2mm) + Text (~35mm) = ~44mm width
+      // Start X = 40 - 22 = 18
+      const startX = 18;
+      const iconY = headerY + 72;
+      const iconSize = 7;
 
       // Icon Background (Rounded Rect)
       doc.setDrawColor(0);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(startX, iconY, 5, 5, 1.5, 1.5, 'S');
+      doc.setLineWidth(0.4);
+      doc.roundedRect(startX, iconY, iconSize, iconSize, 2, 2, 'S');
 
       // Inner Circle
-      doc.circle(startX + 2.5, iconY + 2.5, 1.2, 'S');
+      doc.circle(startX + (iconSize / 2), iconY + (iconSize / 2), iconSize * 0.25, 'S');
 
       // Dot
-      doc.circle(startX + 4, iconY + 1, 0.3, 'F');
+      doc.circle(startX + (iconSize * 0.75), iconY + (iconSize * 0.22), 0.4, 'F');
 
       // Text
-      doc.setFontSize(9);
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("@alternativaketo", startX + 7, iconY + 3.5, { align: "left" });
+      // Adjust text position relative to icon
+      doc.text("@alternativaketo", startX + iconSize + 2, iconY + 5, { align: "left" });
 
       doc.save(`${selectedRecipe.name.replace(/\s+/g, '_')}_ticket.pdf`);
     };
@@ -109,7 +117,8 @@ const Calculator: React.FC<Props> = ({ userId }) => {
     img.src = `${import.meta.env.BASE_URL}logo.png`;
 
     img.onload = () => {
-      doc.addImage(img, 'PNG', 20, 10, 40, 40);
+      // Logo resized to 50x50mm and centered (80-50)/2 = 15
+      doc.addImage(img, 'PNG', 15, 5, 50, 50);
       drawContent(true);
     };
 
