@@ -19,6 +19,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
     companyName: '',
     instagram: '',
     facebook: '',
+    website: '',
     whatsappPhone: '',
     themeColors: defaultTheme,
   });
@@ -282,6 +283,20 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
                     className="w-full p-4 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-brand-cream placeholder-stone-400 transition-all"
                     placeholder="Ej: 5491132427375"
                     title="Ingresá el número con código de país y área sin el signo + ni espacios"
+                  />
+                </div>
+              </div>
+              <div className="pt-2">
+                <label className="block text-sm font-bold text-brand-brown mb-1.5">Página Web</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-4 text-brand-brown/40 font-bold">🌐</span>
+                  <input
+                    type="url"
+                    name="website"
+                    value={profileData.website || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-4 pl-12 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-brand-cream placeholder-stone-400 transition-all font-medium"
+                    placeholder="https://www.tuweb.com"
                   />
                 </div>
               </div>

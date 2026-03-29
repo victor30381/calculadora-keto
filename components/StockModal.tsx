@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs, writeBatch, addDoc, QuerySnapshot, DocumentData, orderBy, limit, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Ingredient, Recipe, getConversionFactor, Unit, ProductionLog } from '../types';
+import { Ingredient, Recipe, getConversionFactor, Unit, ProductionLog, formatQuantity } from '../types';
 
 interface StockModalProps {
     isOpen: boolean;
@@ -508,12 +508,11 @@ const StockModal: React.FC<StockModalProps> = ({ isOpen, onClose, userId }) => {
                                             <td className="p-3 text-right font-mono text-brand-brown/80">
                                                 ${ing.pricePerUnit.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                             </td>
-                                            <td className="p-3 text-center font-bold text-brand-brown">
+                                            <td className="p-3 text-center font-bold text-brand-brown" colSpan={2}>
                                                 <span className={`${(ing.currentStock || 0) < 0 ? 'text-red-500 font-bold' : ((ing.currentStock || 0) > 0 ? 'today-neon-glow' : 'text-brand-brown/40')} px-2 py-1 rounded inline-block`}>
-                                                    {(ing.currentStock || 0).toLocaleString('es-ES', { maximumFractionDigits: 2 })}
+                                                    {formatQuantity(ing.currentStock || 0, ing.unit)}
                                                 </span>
                                             </td>
-                                            <td className="p-3 text-center text-brand-brown/60 text-xs uppercase">{ing.unit}</td>
                                         </tr>
                                     ))}
                                     {ingredients.length === 0 && (

@@ -73,7 +73,7 @@ const Calculator: React.FC<Props> = ({ userId }) => {
       console.log("Iniciando generación de PDF...");
       // alert("Iniciando generación de PDF..."); 
 
-      const finalHeight = isReseller ? 180 : 230;
+      const finalHeight = isReseller ? 160 : 200;
 
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -84,8 +84,8 @@ const Calculator: React.FC<Props> = ({ userId }) => {
       const drawContent = (withLogo: boolean) => {
         try {
           // Header
-          // Adjusted headerY for smaller logo
-          let currentY = withLogo ? 60 : 20;
+          // Moved everything up: less margin after logo
+          let currentY = withLogo ? 47 : 12;
 
           // Helper for centering text
           const centerText = (text: string, y: number, fontSize: number, fontType: string = "normal") => {
@@ -103,24 +103,24 @@ const Calculator: React.FC<Props> = ({ userId }) => {
           doc.setFont("helvetica", "bold");
           const splitTitle = doc.splitTextToSize(selectedRecipe.name.toUpperCase(), 70);
           doc.text(splitTitle, 40, currentY, { align: "center" });
-          currentY += (splitTitle.length * 6) + 2;
+          currentY += (splitTitle.length * 6) + 1;
 
           // Divider Line (Bold)
           doc.setLineWidth(1);
           doc.line(5, currentY, 75, currentY);
-          currentY += 5;
+          currentY += 3;
 
           if (!isReseller) {
             // PRICE (Re-added)
             doc.setFontSize(24);
             doc.setFont("helvetica", "bold");
             doc.text(`$${Math.round(finalPrice).toLocaleString('es-AR')}`, 40, currentY + 5, { align: "center" });
-            currentY += 15;
+            currentY += 10;
 
             // Divider Line (Bold)
             doc.setLineWidth(1);
             doc.line(5, currentY, 75, currentY);
-            currentY += 5;
+            currentY += 4;
           }
 
           // DATOS NUTRICIONALES Header
@@ -129,7 +129,7 @@ const Calculator: React.FC<Props> = ({ userId }) => {
 
           doc.setLineWidth(0.5);
           doc.line(5, currentY + 2, 75, currentY + 2);
-          currentY += 7;
+          currentY += 6;
 
           // Portion Info
           const portionWeight = selectedRecipe.portionWeight || 0;
@@ -239,36 +239,36 @@ const Calculator: React.FC<Props> = ({ userId }) => {
           doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
           doc.text(`ELAB: ${elabDate}`, 5, currentY);
-          currentY += 5;
+          currentY += 4;
           doc.text(`VENCE: ${venceDate}`, 5, currentY);
-          currentY += 7;
+          currentY += 5;
 
           if (!isReseller) {
             // NET WEIGHT BOX
             if (selectedRecipe.isPromo) {
               doc.setLineWidth(1);
-              doc.rect(5, currentY, 70, 10);
+              doc.rect(5, currentY, 70, 8);
               doc.setFontSize(11);
               doc.setFont("helvetica", "bold");
-              doc.text(`CANTIDAD: ${weight} UN`, 40, currentY + 7, { align: "center" });
-              currentY += 15;
+              doc.text(`CANTIDAD: ${weight} UN`, 40, currentY + 5.5, { align: "center" });
+              currentY += 10;
             } else {
               doc.setLineWidth(1);
-              doc.rect(5, currentY, 70, 10);
+              doc.rect(5, currentY, 70, 8);
               doc.setFontSize(12);
               doc.setFont("helvetica", "bold");
-              doc.text(`NETO: ${weight}G`, 40, currentY + 7, { align: "center" });
-              currentY += 15;
+              doc.text(`NETO: ${weight}G`, 40, currentY + 5.5, { align: "center" });
+              currentY += 10;
             }
           }
 
           // SIN AZUCAR BOX
           doc.setLineWidth(1);
-          doc.rect(20, currentY, 40, 10);
+          doc.rect(20, currentY, 40, 8);
           doc.setFontSize(11);
           doc.setFont("helvetica", "bold");
-          doc.text("SIN AZÚCAR", 40, currentY + 7, { align: "center" });
-          currentY += 15;
+          doc.text("SIN AZÚCAR", 40, currentY + 5.5, { align: "center" });
+          currentY += 11;
 
           if (selectedRecipe.isPromo && selectedRecipe.promoItems && selectedRecipe.promoItems.length > 0) {
             const promoItemsText = "INCLUYE: " + selectedRecipe.promoItems.map(pi => {
@@ -280,10 +280,11 @@ const Calculator: React.FC<Props> = ({ userId }) => {
             doc.setFont("helvetica", "bold");
             const promoLines = doc.splitTextToSize(promoItemsText, 70);
             doc.text(promoLines, 5, currentY);
-            currentY += (promoLines.length * 4) + 2;
+            currentY += (promoLines.length * 3) + 3;
           }
 
           // Footer / Social
+          currentY += 10;
           // Instagram Icon & Handle
           const startX = 18; // Centering roughly
           // const iconY = currentY;
@@ -356,10 +357,8 @@ const Calculator: React.FC<Props> = ({ userId }) => {
 
       img.onload = () => {
         try {
-          // Original Logo Layout
-          // Logo resized to 50x50mm and centered (80-50)/2 = 15
-          // FAST compression for basic optimization without quality loss
-          doc.addImage(img, 'PNG', 15, 5, 50, 50, undefined, 'FAST');
+          // Logo resized and moved up
+          doc.addImage(img, 'PNG', 20, 5, 40, 40, undefined, 'FAST');
           drawContent(true);
         } catch (imgErr: any) {
           console.error("Error adding image:", imgErr);

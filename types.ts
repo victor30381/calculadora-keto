@@ -2,6 +2,7 @@ export enum Unit {
   KG = 'Kg',
   GR = 'Gr',
   LT = 'Lt',
+  ML = 'ml',
   UN = 'Un'
 }
 
@@ -45,6 +46,7 @@ export interface Recipe {
   isPromo?: boolean;
   promoItems?: PromoItem[];
   isIngredient?: boolean;
+  yieldUnit?: Unit;
   // Catalog fields
   showInCatalog?: boolean;
   catalogPrice?: number;
@@ -67,14 +69,44 @@ export interface PromoItem {
 // If Unit is LT, input is in ML. (Factor 1000)
 // If Unit is GR, input is in Grams. (Factor 1)
 // If Unit is UN, input is in Units. (Factor 1)
-export const getConversionFactor = (unit: Unit): number => {
+export const getConversionFactor = (unit: Unit | string): number => {
   switch (unit) {
     case Unit.KG: return 1000;
     case Unit.LT: return 1000;
     case Unit.GR: return 1;
+    case Unit.ML: return 1;
     case Unit.UN: return 1;
     default: return 1;
   }
+};
+
+/**
+ * Smartly formats a quantity based on the base unit.
+ * @param quantity The amount in base units (grams for KG/GR, ml for LT/ML, units for UN)
+ * @param baseUnit The unit category
+ */
+export const formatQuantity = (quantity: number, baseUnit: Unit | string): string => {
+  if (baseUnit === Unit.UN) {
+    return `${quantity} Un`;
+  }
+
+  // Weight Category
+  if (baseUnit === Unit.KG || baseUnit === Unit.GR) {
+    if (quantity >= 1000) {
+      return `${(quantity / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} Kg`;
+    }
+    return `${Math.round(quantity).toLocaleString()} g`;
+  }
+
+  // Volume Category
+  if (baseUnit === Unit.LT || baseUnit === Unit.ML) {
+    if (quantity >= 1000) {
+      return `${(quantity / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} L`;
+    }
+    return `${Math.round(quantity).toLocaleString()} ml`;
+  }
+
+  return `${quantity} ${baseUnit}`;
 };
 
 export interface Client {
@@ -141,6 +173,7 @@ export interface UserProfile {
   companyName: string;
   instagram: string;
   facebook: string;
+  website?: string;
   whatsappPhone?: string; // New field for WhatsApp notifications
   themeColors?: ThemeColors;
   logoUrl?: string;

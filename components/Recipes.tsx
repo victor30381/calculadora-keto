@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { collection, addDoc, query, where, onSnapshot, QuerySnapshot, DocumentData, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Ingredient, Recipe, getConversionFactor } from '../types';
+import { Ingredient, Recipe, getConversionFactor, Unit, formatQuantity } from '../types';
 
 interface Props {
   userId: string;
@@ -12,6 +12,7 @@ interface LocalRecipeIngredient {
   ingredientId: string;
   type?: 'ingredient' | 'recipe';
   quantityUsed: string;
+  unitUsed: string;
 }
 
 interface LocalPromoItem {
@@ -39,6 +40,7 @@ const Recipes: React.FC<Props> = ({ userId }) => {
   const [fiber, setFiber] = useState('');
   const [portionWeight, setPortionWeight] = useState('');
   const [conservation, setConservation] = useState('');
+  const [yieldUnit, setYieldUnit] = useState('gr');
 
   // Catalog States
   const [showInCatalog, setShowInCatalog] = useState(false);
@@ -82,7 +84,7 @@ const Recipes: React.FC<Props> = ({ userId }) => {
   }, [userId]);
 
   const addIngredientRow = () => {
-    setIngredientsList([...ingredientsList, { ingredientId: '', type: 'ingredient', quantityUsed: '' }]);
+    setIngredientsList([...ingredientsList, { ingredientId: '', type: 'ingredient', quantityUsed: '', unitUsed: 'gr' }]);
   };
 
   const removeIngredientRow = (index: number) => {
@@ -129,6 +131,9 @@ const Recipes: React.FC<Props> = ({ userId }) => {
           const recipe = savedRecipes.find(r => r.id === item.ingredientId);
           const qty = parseFloat(item.quantityUsed);
           if (recipe && !isNaN(qty)) {
+            // If sub-recipe, base unit is grams OR porción. 
+            // We assume if they choose something other than 'gr', it's special.
+            // But usually we just store grams.
             total += recipe.costPerGram * qty;
           }
         } else {
@@ -136,7 +141,10 @@ const Recipes: React.FC<Props> = ({ userId }) => {
           const qty = parseFloat(item.quantityUsed);
           if (ing && !isNaN(qty)) {
             const factor = getConversionFactor(ing.unit);
-            total += (ing.pricePerUnit / factor) * qty;
+            // Convert input to base unit (grams/ml)
+            const inputFactor = getConversionFactor(item.unitUsed);
+            const baseQty = qty * inputFactor;
+            total += (ing.pricePerUnit / factor) * baseQty;
           }
         }
       });
@@ -149,11 +157,16 @@ const Recipes: React.FC<Props> = ({ userId }) => {
     setSuccessMsg('');
     setErrorMsg('');
 
-    const yieldWeight = isPromoMode ? 1 : parseFloat(totalYield);
+    const totalCost = calculateTotalCost();
+    // Convert yield to grams if it's Kg/Lt
+    const yieldInputFactor = getConversionFactor(yieldUnit);
+    const yieldWeight = isPromoMode ? 1 : (parseFloat(totalYield) * yieldInputFactor);
+    
     if (!recipeName || (!isPromoMode && (isNaN(yieldWeight) || yieldWeight <= 0))) {
       alert("Por favor complete todos los campos correctamente.");
       return;
     }
+
     if (isPromoMode && promoItemsList.length === 0) {
       alert("Agrega al menos una receta a la promoción.");
       return;
@@ -163,7 +176,6 @@ const Recipes: React.FC<Props> = ({ userId }) => {
       return;
     }
 
-    const totalCost = calculateTotalCost();
     const costPerGram = totalCost / yieldWeight;
 
     const finalIngredients = isPromoMode ? [] : ingredientsList.map(item => {
@@ -180,11 +192,14 @@ const Recipes: React.FC<Props> = ({ userId }) => {
         const ing = availableIngredients.find(i => i.id === item.ingredientId)!;
         const qty = parseFloat(item.quantityUsed);
         const factor = getConversionFactor(ing.unit);
+        const inputFactor = getConversionFactor(item.unitUsed);
+        const baseQty = qty * inputFactor;
+
         return {
           ingredientId: item.ingredientId,
           type: 'ingredient' as const,
-          quantityUsed: qty,
-          calculatedCost: (ing.pricePerUnit / factor) * qty
+          quantityUsed: baseQty,
+          calculatedCost: (ing.pricePerUnit / factor) * baseQty
         };
       }
     });
@@ -247,14 +262,15 @@ const Recipes: React.FC<Props> = ({ userId }) => {
         fat: isPromoMode ? autoFat : autoFat + (parseFloat(fat) || 0),
         fiber: isPromoMode ? autoFiber : autoFiber + (parseFloat(fiber) || 0),
       },
-      ...(isPromoMode ? {} : {
+      ... (isPromoMode ? {} : {
         manualNutritionalInfo: {
           calories: parseFloat(calories) || 0,
           protein: parseFloat(protein) || 0,
           carbs: parseFloat(carbs) || 0,
           fat: parseFloat(fat) || 0,
           fiber: parseFloat(fiber) || 0,
-        }
+        },
+        yieldUnit: yieldUnit as Unit
       }),
       portionWeight: parseFloat(portionWeight) || 0,
       conservation,
@@ -291,7 +307,23 @@ const Recipes: React.FC<Props> = ({ userId }) => {
 
   const handleEdit = (recipe: Recipe) => {
     setRecipeName(recipe.name);
-    setTotalYield(recipe.totalYieldWeight.toString());
+    if (recipe.yieldUnit) {
+      setYieldUnit(recipe.yieldUnit);
+      if (recipe.yieldUnit === Unit.KG || recipe.yieldUnit === Unit.LT) {
+        setTotalYield((recipe.totalYieldWeight / 1000).toString());
+      } else {
+        setTotalYield(recipe.totalYieldWeight.toString());
+      }
+    } else {
+      // Logic for old recipes
+      if (recipe.totalYieldWeight >= 1000 && !recipe.portionWeight) {
+        setTotalYield((recipe.totalYieldWeight / 1000).toString());
+        setYieldUnit('Kg');
+      } else {
+        setTotalYield(recipe.totalYieldWeight.toString());
+        setYieldUnit(recipe.portionWeight ? 'Un' : 'gr');
+      }
+    }
 
     const isPromo = !!recipe.isPromo;
     setIsPromoMode(isPromo);
@@ -304,11 +336,23 @@ const Recipes: React.FC<Props> = ({ userId }) => {
       setPromoItemsList(localPromoItems);
       setIngredientsList([]);
     } else {
-      const localIngredients = recipe.ingredients.map(i => ({
-        ingredientId: i.ingredientId,
-        type: i.type || 'ingredient',
-        quantityUsed: i.quantityUsed.toString()
-      }));
+      const localIngredients = recipe.ingredients.map(i => {
+        let unitUsed = 'gr';
+        if (i.type !== 'recipe') {
+          const ing = availableIngredients.find(ai => ai.id === i.ingredientId);
+          if (ing?.unit === Unit.UN) unitUsed = 'Un';
+        } else {
+          const subR = savedRecipes.find(sr => sr.id === i.ingredientId);
+          if (subR?.portionWeight) unitUsed = 'porción';
+        }
+
+        return {
+          ingredientId: i.ingredientId,
+          type: i.type || 'ingredient',
+          quantityUsed: i.quantityUsed.toString(),
+          unitUsed
+        };
+      });
       setIngredientsList(localIngredients);
       setPromoItemsList([]);
     }
@@ -350,6 +394,65 @@ const Recipes: React.FC<Props> = ({ userId }) => {
     }
   };
 
+  const handleDuplicate = (recipe: Recipe) => {
+    handleEdit(recipe);
+    setEditingId(null);
+    setRecipeName(`${recipe.name} (Copia)`);
+    setViewRecipe(null);
+  };
+
+  const handleCopyToClipboard = (recipe: Recipe) => {
+    let text = `RECETA: ${recipe.name.toUpperCase()}\n`;
+    text += `Rendimiento: ${formatQuantity(recipe.totalYieldWeight, recipe.yieldUnit || (recipe.portionWeight ? Unit.UN : Unit.GR))}\n\n`;
+    
+    text += `INGREDIENTES:\n`;
+    if (recipe.isPromo) {
+      (recipe.promoItems || []).forEach(pItem => {
+        const fullRecipe = savedRecipes.find(r => r.id === pItem.recipeId);
+        text += `- ${fullRecipe?.name || 'Receta eliminada'}: ${formatQuantity(pItem.quantityUsed, fullRecipe?.portionWeight ? Unit.UN : Unit.GR)}\n`;
+      });
+    } else {
+      recipe.ingredients.forEach(ing => {
+        let name = 'Eliminado';
+        let displayQty = '';
+        if (ing.type === 'recipe') {
+          const subR = savedRecipes.find(r => r.id === ing.ingredientId);
+          if (subR) {
+            name = `${subR.name} (Receta)`;
+            displayQty = formatQuantity(ing.quantityUsed, subR.portionWeight ? Unit.UN : Unit.GR);
+          }
+        } else {
+          const fullIng = availableIngredients.find(i => i.id === ing.ingredientId);
+          if (fullIng) {
+            name = fullIng.name;
+            displayQty = formatQuantity(ing.quantityUsed, fullIng.unit);
+          }
+        }
+        text += `- ${name}: ${displayQty}\n`;
+      });
+    }
+
+    if (recipe.nutritionalInfo) {
+      text += `\nINFO NUTRICIONAL (TOTAL):\n`;
+      text += `Calorías: ${recipe.nutritionalInfo.calories} Kcal\n`;
+      text += `Proteínas: ${recipe.nutritionalInfo.protein}g\n`;
+      text += `Grasas: ${recipe.nutritionalInfo.fat}g\n`;
+      text += `Carbos: ${recipe.nutritionalInfo.carbs}g\n`;
+      text += `Fibra: ${recipe.nutritionalInfo.fiber}g\n`;
+    }
+
+    if (recipe.portionWeight) text += `\nPorción Sugerida: ${recipe.portionWeight}g\n`;
+    if (recipe.conservation) text += `Conservación: ${recipe.conservation}\n`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      setSuccessMsg('Receta copiada al portapapeles!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    }).catch(err => {
+      console.error('Error copying text: ', err);
+      alert('Error al copiar al portapapeles');
+    });
+  };
+
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (!id) return;
@@ -380,6 +483,7 @@ const Recipes: React.FC<Props> = ({ userId }) => {
     setIsPromoMode(false);
     setIsIngredientRecipe(false);
     setTotalYield('');
+    setYieldUnit('gr');
     setCalories('');
     setProtein('');
     setCarbs('');
@@ -604,7 +708,18 @@ const Recipes: React.FC<Props> = ({ userId }) => {
                        const [type, ...idParts] = val.split('-');
                        const id = idParts.join('-');
                        const newList = [...ingredientsList];
-                       newList[index] = { ...newList[index], ingredientId: id, type: type as 'ingredient' | 'recipe' };
+                       
+                       // Set default unit based on ingredient type/unit
+                       let defaultUnit = 'gr';
+                       if (type === 'ingredient') {
+                         const ing = availableIngredients.find(ai => ai.id === id);
+                         if (ing?.unit === Unit.UN) defaultUnit = 'Un';
+                       } else {
+                         const subR = savedRecipes.find(sr => sr.id === id);
+                         if (subR?.portionWeight) defaultUnit = 'porción';
+                       }
+
+                       newList[index] = { ...newList[index], ingredientId: id, type: type as 'ingredient' | 'recipe', unitUsed: defaultUnit };
                        setIngredientsList(newList);
                     }}
                     className="w-full sm:w-2/3 p-2.5 rounded-xl border border-brand-brown/20 bg-brand-beige/50 text-sm text-brand-brown focus:ring-2 focus:ring-brand-accent/50 focus:outline-none"
@@ -633,9 +748,41 @@ const Recipes: React.FC<Props> = ({ userId }) => {
                       placeholder="Cantidad usada"
                       required
                     />
-                    <span className="absolute right-3 top-2.5 text-xs text-brand-brown/60">
-                      {row.ingredientId ? getIngredientUnitLabel(row.ingredientId, row.type) : '-'}
-                    </span>
+                    <select
+                      value={row.unitUsed}
+                      onChange={(e) => {
+                        const newList = [...ingredientsList];
+                        newList[index] = { ...newList[index], unitUsed: e.target.value };
+                        setIngredientsList(newList);
+                      }}
+                      className="absolute right-0 top-0 bottom-0 px-2 rounded-r-xl border-l border-brand-brown/20 bg-brand-brown/5 text-xs text-brand-brown font-bold focus:outline-none"
+                    >
+                      {row.type === 'recipe' ? (
+                        <>
+                          <option value="gr">gr</option>
+                          {savedRecipes.find(r => r.id === row.ingredientId)?.portionWeight && <option value="porción">porción</option>}
+                        </>
+                      ) : (
+                        (() => {
+                          const ing = availableIngredients.find(ai => ai.id === row.ingredientId);
+                          if (!ing) return <option value="cant">-</option>;
+                          if (ing.unit === Unit.UN) return <option value="Un">Un</option>;
+                          if (ing.unit === Unit.KG || ing.unit === Unit.GR) return (
+                            <>
+                              <option value="gr">gr</option>
+                              <option value="Kg">Kg</option>
+                            </>
+                          );
+                          if (ing.unit === Unit.LT || ing.unit === Unit.ML) return (
+                            <>
+                              <option value="ml">ml</option>
+                              <option value="Lt">Lt</option>
+                            </>
+                          );
+                          return <option value={ing.unit}>{ing.unit}</option>;
+                        })()
+                      )}
+                    </select>
                   </div>
                 </div>
                 <button
@@ -672,7 +819,17 @@ const Recipes: React.FC<Props> = ({ userId }) => {
                   placeholder="Total en gramos o unidades"
                   required={!isPromoMode}
                 />
-                <span className="absolute right-3 top-3.5 text-sm text-brand-brown/60">gr/un</span>
+                <select
+                  value={yieldUnit}
+                  onChange={(e) => setYieldUnit(e.target.value)}
+                  className="absolute right-0 top-0 bottom-0 px-3 rounded-r-xl border-l border-brand-brown/20 bg-brand-brown/5 text-sm text-brand-brown font-bold focus:outline-none"
+                >
+                  <option value="gr">gr</option>
+                  <option value="Kg">Kg</option>
+                  <option value="ml">ml</option>
+                  <option value="Lt">Lt</option>
+                  <option value="Un">Un</option>
+                </select>
               </div>
             </div>
           )}
@@ -923,7 +1080,7 @@ const Recipes: React.FC<Props> = ({ userId }) => {
                       {!recipe.isPromo && (
                         <p className="flex justify-between">
                           <span>Rendimiento (Yield):</span>
-                          <span className="font-medium text-brand-brown">{recipe.totalYieldWeight} gr/un</span>
+                          <span className="font-medium text-brand-brown">{formatQuantity(recipe.totalYieldWeight, recipe.yieldUnit || (recipe.portionWeight ? Unit.UN : Unit.GR))}</span>
                         </p>
                       )}
                       <p className="flex justify-between">
@@ -993,16 +1150,38 @@ const Recipes: React.FC<Props> = ({ userId }) => {
               </svg>
             </button>
 
-            <h2 className="text-2xl font-serif font-bold text-center text-brand-brown mb-6 pr-8">
-              {viewRecipe.name}
-            </h2>
+            <div className="flex justify-center items-center gap-2 mb-6 pr-8">
+              <h2 className="text-2xl font-serif font-bold text-center text-brand-brown">
+                {viewRecipe.name}
+              </h2>
+              <button
+                onClick={() => handleDuplicate(viewRecipe)}
+                className="p-1.5 bg-brand-accent/20 rounded-lg hover:bg-brand-accent/40 text-brand-brown transition-colors group flex items-center gap-1.5"
+                title="Duplicar receta"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                </svg>
+                <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">Duplicar</span>
+              </button>
+              <button
+                onClick={() => handleCopyToClipboard(viewRecipe)}
+                className="p-1.5 bg-brand-brown/10 rounded-lg hover:bg-brand-brown/20 text-brand-brown transition-colors group flex items-center gap-1.5"
+                title="Copiar texto para Docs"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">Copiar Texto</span>
+              </button>
+            </div>
 
             {/* Quick Stats Grid */}
             <div className={`grid ${viewRecipe.isPromo ? 'grid-cols-1' : 'grid-cols-3'} gap-3 mb-6`}>
               {!viewRecipe.isPromo && (
                 <div className="bg-brand-beige/30 p-3 rounded-xl border border-brand-brown/5 text-center">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-brand-brown/60 mb-1">Rendimiento</span>
-                  <span className="block font-bold text-brand-brown text-lg">{viewRecipe.totalYieldWeight} <span className="text-xs font-normal">g/un</span></span>
+                  <span className="block font-bold text-brand-brown text-lg">{formatQuantity(viewRecipe.totalYieldWeight, viewRecipe.yieldUnit || (viewRecipe.portionWeight ? Unit.UN : Unit.GR))}</span>
                 </div>
               )}
               <div className="bg-brand-beige/30 p-3 rounded-xl border border-brand-brown/5 text-center">
@@ -1030,7 +1209,7 @@ const Recipes: React.FC<Props> = ({ userId }) => {
                       <div key={idx} className="flex justify-between items-center text-sm border-b border-dashed border-brand-brown/10 last:border-0 pb-2 last:pb-0 mb-2 last:mb-0">
                         <span className="font-medium text-brand-brown">{fullRecipe?.name || 'Receta eliminada'}</span>
                         <div className="text-right flex flex-col items-end">
-                          <span className="font-bold text-brand-brown">{pItem.quantityUsed} <span className="text-xs font-normal opacity-70">gr/un</span></span>
+                          <span className="font-bold text-brand-brown">{formatQuantity(pItem.quantityUsed, fullRecipe?.portionWeight ? Unit.UN : Unit.GR)}</span>
                         </div>
                       </div>
                     );
@@ -1038,25 +1217,25 @@ const Recipes: React.FC<Props> = ({ userId }) => {
                 ) : (
                   viewRecipe.ingredients.map((ing, idx) => {
                     let name = 'Eliminado';
-                    let unit = 'un';
+                    let displayQty = '';
                     if (ing.type === 'recipe') {
                       const recipe = savedRecipes.find(r => r.id === ing.ingredientId);
                       if (recipe) {
                         name = `${recipe.name} (Receta)`;
-                        unit = recipe.portionWeight ? 'porción' : 'gr';
+                        displayQty = formatQuantity(ing.quantityUsed, recipe.portionWeight ? Unit.UN : Unit.GR);
                       }
                     } else {
                       const fullIng = availableIngredients.find(i => i.id === ing.ingredientId);
                       if (fullIng) {
                         name = fullIng.name;
-                        unit = fullIng.unit;
+                        displayQty = formatQuantity(ing.quantityUsed, fullIng.unit);
                       }
                     }
                     return (
                       <div key={idx} className="flex justify-between items-center text-sm border-b border-dashed border-brand-brown/10 last:border-0 pb-2 last:pb-0 mb-2 last:mb-0">
                         <span className="font-medium text-brand-brown">{name}</span>
                         <div className="text-right flex flex-col items-end">
-                          <span className="font-bold text-brand-brown">{ing.quantityUsed} <span className="text-xs font-normal opacity-70">{unit}</span></span>
+                          <span className="font-bold text-brand-brown">{displayQty}</span>
                         </div>
                       </div>
                     );
