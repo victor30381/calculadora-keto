@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Ingredients from './Ingredients';
 import Recipes from './Recipes';
 import Calculator from './Calculator';
+import ProductionCalculator from './ProductionCalculator';
 
 interface CalculatorModalProps {
     isOpen: boolean;
@@ -10,7 +11,7 @@ interface CalculatorModalProps {
 }
 
 const CalculatorModal: React.FC<CalculatorModalProps> = ({ isOpen, onClose, userId }) => {
-    const [activeTab, setActiveTab] = useState<'inventory' | 'recipes' | 'calc'>('inventory');
+    const [activeTab, setActiveTab] = useState<'inventory' | 'recipes' | 'calc' | 'production'>('inventory');
 
     if (!isOpen) return null;
 
@@ -72,11 +73,23 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ isOpen, onClose, user
                     px-6 py-3 rounded-t-xl font-bold text-sm transition-all duration-200 relative -ml-2
                     ${activeTab === 'calc'
                                 ? 'warm-gradient-brown text-white shadow-lg pb-4 -mb-1 z-30'
-                                : 'bg-brand-brown/5 text-brand-brown/50 hover:bg-brand-brown/10 pb-3'
+                                : 'bg-brand-brown/5 text-brand-brown/50 hover:bg-brand-brown/10 hover:text-brand-brown pb-3 z-20'
                             }
                 `}
                     >
                         Precio Venta (x3)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('production')}
+                        className={`
+                    px-6 py-3 rounded-t-xl font-bold text-sm transition-all duration-200 relative -ml-2
+                    ${activeTab === 'production'
+                                ? 'warm-gradient-brown text-white shadow-lg pb-4 -mb-1 z-40'
+                                : 'bg-brand-brown/5 text-brand-brown/50 hover:bg-brand-brown/10 hover:text-brand-brown pb-3 z-10'
+                            }
+                `}
+                    >
+                        Proporciones
                     </button>
                 </div>
 
@@ -86,6 +99,7 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ isOpen, onClose, user
                         {activeTab === 'inventory' && <Ingredients userId={userId} />}
                         {activeTab === 'recipes' && <Recipes userId={userId} />}
                         {activeTab === 'calc' && <Calculator userId={userId} />}
+                        {activeTab === 'production' && <ProductionCalculator userId={userId} />}
                     </div>
                 </div>
             </div>

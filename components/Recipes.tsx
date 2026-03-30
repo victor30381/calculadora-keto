@@ -557,80 +557,109 @@ const Recipes: React.FC<Props> = ({ userId }) => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-8 animate-fade-in pb-20">
+    <div className="space-y-5 sm:space-y-8 animate-fade-in pb-20">
 
       {/* FORM SECTION */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-brand-brown/10">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
-          <h2 className="text-xl font-bold text-brand-brown font-serif">
-            {editingId ? (isPromoMode ? 'Editar Promoción' : 'Editar Receta') : (isPromoMode ? 'Nueva Promoción' : 'Nueva Receta')}
-          </h2>
-
-          {!editingId && (
-            <div className="flex bg-brand-brown/5 rounded-xl p-1 shadow-inner">
-              <button
-                type="button"
-                onClick={() => setIsPromoMode(false)}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${!isPromoMode ? 'bg-white text-brand-brown shadow-sm' : 'text-brand-brown/60 hover:text-brand-brown'}`}
-              >
-                Receta
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsPromoMode(true)}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${isPromoMode ? 'bg-white text-brand-brown shadow-sm' : 'text-brand-brown/60 hover:text-brand-brown'}`}
-              >
-                Promoción
-              </button>
+      <div className="bg-white rounded-2xl shadow-lg border border-brand-brown/8 overflow-hidden">
+        {/* Form Header with gradient accent */}
+        <div className="relative px-5 sm:px-6 pt-5 sm:pt-6 pb-4">
+          <div className="absolute top-0 left-0 right-0 h-1 warm-gradient-accent opacity-60"></div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl warm-gradient-brown flex items-center justify-center shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {isPromoMode ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  )}
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-brand-brown font-serif leading-tight">
+                  {editingId ? (isPromoMode ? 'Editar Promoción' : 'Editar Receta') : (isPromoMode ? 'Nueva Promoción' : 'Nueva Receta')}
+                </h2>
+                <p className="text-[11px] text-brand-brown/50 mt-0.5">{isPromoMode ? 'Combina recetas en una oferta especial' : 'Calcula costos e información nutricional'}</p>
+              </div>
             </div>
-          )}
+
+            {!editingId && (
+              <div className="flex bg-brand-brown/5 rounded-xl p-1 shadow-inner border border-brand-brown/5">
+                <button
+                  type="button"
+                  onClick={() => setIsPromoMode(false)}
+                  className={`px-5 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${!isPromoMode ? 'bg-white text-brand-brown shadow-md' : 'text-brand-brown/50 hover:text-brand-brown'}`}
+                >
+                  Receta
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPromoMode(true)}
+                  className={`px-5 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${isPromoMode ? 'bg-white text-brand-brown shadow-md' : 'text-brand-brown/50 hover:text-brand-brown'}`}
+                >
+                  Promoción
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
+        <div className="px-5 sm:px-6 pb-5 sm:pb-6">
         {errorMsg && (
-          <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4 text-sm">
+          <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-xl mb-4 text-sm flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Name */}
           <div>
-            <label className="block text-sm font-bold text-brand-brown mb-1">{isPromoMode ? 'Nombre de la Promoción' : 'Nombre de la Receta'}</label>
+            <label className="block text-xs font-bold text-brand-brown/70 uppercase tracking-wider mb-1.5">{isPromoMode ? 'Nombre de la Promoción' : 'Nombre de la Receta'}</label>
             <input
               type="text"
               value={recipeName}
               onChange={(e) => setRecipeName(e.target.value)}
-              className="w-full p-3 rounded-xl border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-brand-beige/50 placeholder-brand-brown/40"
+              className="w-full p-3.5 rounded-xl border border-brand-brown/15 focus:outline-none focus:ring-2 focus:ring-brand-accent/40 focus:border-brand-accent/30 text-brand-brown bg-brand-cream/50 placeholder-brand-brown/30 text-base font-medium transition-all input-premium"
               placeholder={isPromoMode ? "Ej. Promoción Día de la Madre" : "Ej. Torta de Chocolate Keto"}
               required
             />
           </div>
 
-          {/* Is Ingredient Checkbox */}
+          {/* Is Ingredient Toggle */}
           {!isPromoMode && (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isIngredientRecipe"
-                checked={isIngredientRecipe}
-                onChange={(e) => setIsIngredientRecipe(e.target.checked)}
-                className="w-4 h-4 text-brand-accent rounded focus:ring-brand-accent/50 border-brand-brown/20"
-              />
-              <label htmlFor="isIngredientRecipe" className="text-sm font-bold text-brand-brown">
-                Esta receta puede usarse como ingrediente en otras recetas
-              </label>
-            </div>
+            <label htmlFor="isIngredientRecipe" className="flex items-center gap-3 p-3 rounded-xl bg-brand-accent/5 border border-brand-accent/10 cursor-pointer hover:bg-brand-accent/10 transition-colors group">
+              <div className={`relative w-10 h-6 rounded-full transition-colors duration-200 ${isIngredientRecipe ? 'bg-brand-accent' : 'bg-brand-brown/20'}`}>
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ${isIngredientRecipe ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                <input
+                  type="checkbox"
+                  id="isIngredientRecipe"
+                  checked={isIngredientRecipe}
+                  onChange={(e) => setIsIngredientRecipe(e.target.checked)}
+                  className="sr-only"
+                />
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-brand-brown block leading-tight">Usar como sub-ingrediente</span>
+                <span className="text-[11px] text-brand-brown/50">Permitir usar esta receta dentro de otras recetas</span>
+              </div>
+            </label>
           )}
 
           {/* Ingredients or Promo Items */}
           {isPromoMode ? (
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <label className="block text-sm font-bold text-brand-brown">Recetas de la Promoción</label>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-brand-accent/15 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                  </div>
+                  <label className="block text-xs font-bold text-brand-brown/70 uppercase tracking-wider">Recetas de la Promoción</label>
+                </div>
                 <button
                   type="button"
                   onClick={addPromoItemRow}
-                  className="text-xs bg-brand-brown/10 text-brand-brown px-3 py-1 rounded-full font-bold hover:bg-brand-brown/20 transition-colors"
+                  className="text-xs bg-brand-brown text-white px-3.5 py-1.5 rounded-lg font-bold hover:bg-brand-brown/90 transition-all shadow-sm hover:shadow-md"
                 >
                   + Agregar
                 </button>
@@ -682,11 +711,16 @@ const Recipes: React.FC<Props> = ({ userId }) => {
           ) : (
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <label className="block text-sm font-bold text-brand-brown">Ingredientes</label>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-brand-accent/15 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                  </div>
+                  <label className="block text-xs font-bold text-brand-brown/70 uppercase tracking-wider">Ingredientes</label>
+                </div>
                 <button
                   type="button"
                   onClick={addIngredientRow}
-                  className="text-xs bg-brand-brown/10 text-brand-brown px-3 py-1 rounded-full font-bold hover:bg-brand-brown/20 transition-colors"
+                  className="text-xs bg-brand-brown text-white px-3.5 py-1.5 rounded-lg font-bold hover:bg-brand-brown/90 transition-all shadow-sm hover:shadow-md"
                 >
                   + Agregar
                 </button>
@@ -804,152 +838,132 @@ const Recipes: React.FC<Props> = ({ userId }) => {
 
           {/* Yield */}
           {!isPromoMode && (
-            <div className="bg-brand-brown/5 p-4 rounded-xl border border-brand-brown/10">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-bold text-brand-brown">Costo Ingredientes:</span>
-                <span className="font-bold text-lg text-brand-brown">${currentTotal.toFixed(2)}</span>
+            <div className="bg-gradient-to-br from-brand-brown/5 to-brand-accent/5 p-5 rounded-2xl border border-brand-brown/10 space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg warm-gradient-accent flex items-center justify-center shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <span className="text-sm font-bold text-brand-brown">Costo Ingredientes</span>
+                </div>
+                <span className="font-bold text-xl text-brand-brown font-serif">${currentTotal.toFixed(2)}</span>
               </div>
-              <label className="block text-sm font-bold text-brand-brown mb-1">Peso Final de la Preparación (Yield)</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={totalYield}
-                  onChange={(e) => setTotalYield(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-white placeholder-brand-brown/40"
-                  placeholder="Total en gramos o unidades"
-                  required={!isPromoMode}
-                />
-                <select
-                  value={yieldUnit}
-                  onChange={(e) => setYieldUnit(e.target.value)}
-                  className="absolute right-0 top-0 bottom-0 px-3 rounded-r-xl border-l border-brand-brown/20 bg-brand-brown/5 text-sm text-brand-brown font-bold focus:outline-none"
-                >
-                  <option value="gr">gr</option>
-                  <option value="Kg">Kg</option>
-                  <option value="ml">ml</option>
-                  <option value="Lt">Lt</option>
-                  <option value="Un">Un</option>
-                </select>
+              <div>
+                <label className="block text-xs font-bold text-brand-brown/60 uppercase tracking-wider mb-1.5">Peso Final de la Preparación (Yield)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={totalYield}
+                    onChange={(e) => setTotalYield(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-brand-brown/15 focus:outline-none focus:ring-2 focus:ring-brand-accent/40 text-brand-brown bg-white placeholder-brand-brown/30 input-premium transition-all"
+                    placeholder="Total (Ej. 1000)"
+                    required={!isPromoMode}
+                  />
+                  <select
+                    value={yieldUnit}
+                    onChange={(e) => setYieldUnit(e.target.value)}
+                    className="absolute right-0 top-0 bottom-0 px-3 rounded-r-xl border-l border-brand-brown/15 bg-brand-brown/5 text-sm text-brand-brown font-bold focus:outline-none"
+                  >
+                    <option value="gr">gr</option>
+                    <option value="Kg">Kg</option>
+                    <option value="ml">ml</option>
+                    <option value="Lt">Lt</option>
+                    <option value="Un">Un</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
           {isPromoMode && (
-            <div className="bg-brand-brown/5 p-4 rounded-xl border border-brand-brown/10 flex justify-between items-center">
-              <span className="text-sm font-bold text-brand-brown">Costo Base de Promo:</span>
-              <span className="font-bold text-lg text-brand-brown">${currentTotal.toFixed(2)}</span>
+            <div className="bg-gradient-to-br from-brand-brown/5 to-brand-accent/5 p-5 rounded-2xl border border-brand-brown/10 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg warm-gradient-accent flex items-center justify-center shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <span className="text-sm font-bold text-brand-brown">Costo Base de Promo</span>
+              </div>
+              <span className="font-bold text-xl text-brand-brown font-serif">${currentTotal.toFixed(2)}</span>
             </div>
           )}
 
           {/* Nutritional Info Section */}
           {!isPromoMode && (
-            <div className="bg-brand-brown/5 p-4 rounded-xl border border-brand-brown/10">
-              <h3 className="text-md font-bold text-brand-brown mb-1 font-serif">
-                Información Nutricional Adicional
-              </h3>
-              <p className="text-xs text-brand-brown/70 mb-3 border-b border-brand-brown/10 pb-2">
-                Los valores de las sub-recetas utilizadas se suman automáticamente. Ingresa los valores correspondientes <strong>solo</strong> a los ingredientes básicos adicionales.
-              </p>
+            <div className="bg-gradient-to-br from-brand-beige/60 to-white p-5 rounded-2xl border border-brand-brown/10 space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-brand-brown/8">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-brand-brown leading-tight">Información Nutricional</h3>
+                  <p className="text-[10px] text-brand-brown/50">Sub-recetas se suman automáticamente. Ingresa solo valores adicionales.</p>
+                </div>
+              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-brand-brown mb-1">Calorías Extra (Kcal)</label>
-                  <input
-                    type="number"
-                    value={calories}
-                    onChange={(e) => setCalories(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-white placeholder-brand-brown/40"
-                    placeholder="0"
-                  />
+                  <label className="block text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-1">Calorías (Kcal)</label>
+                  <input type="number" value={calories} onChange={(e) => setCalories(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-brand-brown/12 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-brand-brown bg-white placeholder-brand-brown/25 text-sm input-premium transition-all" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-brand-brown mb-1">Grasas Extra (g)</label>
-                  <input
-                    type="number"
-                    value={fat}
-                    onChange={(e) => setFat(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-white placeholder-brand-brown/40"
-                    placeholder="0"
-                  />
+                  <label className="block text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-1">Grasas (g)</label>
+                  <input type="number" value={fat} onChange={(e) => setFat(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-brand-brown/12 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-brand-brown bg-white placeholder-brand-brown/25 text-sm input-premium transition-all" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-brand-brown mb-1">Carbos Extra (g)</label>
-                  <input
-                    type="number"
-                    value={carbs}
-                    onChange={(e) => setCarbs(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-white placeholder-brand-brown/40"
-                    placeholder="0"
-                  />
+                  <label className="block text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-1">Carbos (g)</label>
+                  <input type="number" value={carbs} onChange={(e) => setCarbs(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-brand-brown/12 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-brand-brown bg-white placeholder-brand-brown/25 text-sm input-premium transition-all" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-brand-brown mb-1">Proteínas Extra (g)</label>
-                  <input
-                    type="number"
-                    value={protein}
-                    onChange={(e) => setProtein(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-white placeholder-brand-brown/40"
-                    placeholder="0"
-                  />
+                  <label className="block text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-1">Proteínas (g)</label>
+                  <input type="number" value={protein} onChange={(e) => setProtein(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-brand-brown/12 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-brand-brown bg-white placeholder-brand-brown/25 text-sm input-premium transition-all" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-brand-brown mb-1">Fibra Extra (g)</label>
-                  <input
-                    type="number"
-                    value={fiber}
-                    onChange={(e) => setFiber(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-white placeholder-brand-brown/40"
-                    placeholder="0"
-                  />
+                  <label className="block text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-1">Fibra (g)</label>
+                  <input type="number" value={fiber} onChange={(e) => setFiber(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-brand-brown/12 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-brand-brown bg-white placeholder-brand-brown/25 text-sm input-premium transition-all" placeholder="0" />
                 </div>
               </div>
 
               {/* Total preview */}
-              <div className="bg-white p-3 rounded-lg border border-brand-brown/20 mt-4 mb-4">
-                <h4 className="text-sm font-bold text-brand-brown mb-2">Total Calculado (Auto + Manual):</h4>
-                <div className="grid grid-cols-5 gap-0 text-center text-xs">
-                  <div>
-                    <span className="block font-bold">Kcal</span>
-                    <span className="text-brand-brown/80">{Math.round(autoNutrients.calories + (parseFloat(calories) || 0))}</span>
+              <div className="bg-white p-4 rounded-xl border border-brand-brown/10 shadow-sm">
+                <h4 className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-3">Total Calculado (Auto + Manual)</h4>
+                <div className="grid grid-cols-5 gap-2 text-center">
+                  <div className="bg-orange-50 rounded-lg p-2 border border-orange-100">
+                    <span className="block text-[9px] font-bold text-orange-600/80 uppercase">Kcal</span>
+                    <span className="font-bold text-brand-brown text-sm">{Math.round(autoNutrients.calories + (parseFloat(calories) || 0))}</span>
                   </div>
-                  <div>
-                    <span className="block font-bold">Grasas</span>
-                    <span className="text-brand-brown/80">{Math.round((autoNutrients.fat + (parseFloat(fat) || 0)) * 10) / 10}g</span>
+                  <div className="bg-amber-50 rounded-lg p-2 border border-amber-100">
+                    <span className="block text-[9px] font-bold text-amber-600/80 uppercase">Grasas</span>
+                    <span className="font-bold text-brand-brown text-sm">{Math.round((autoNutrients.fat + (parseFloat(fat) || 0)) * 10) / 10}g</span>
                   </div>
-                  <div>
-                    <span className="block font-bold">Carbos</span>
-                    <span className="text-brand-brown/80">{Math.round((autoNutrients.carbs + (parseFloat(carbs) || 0)) * 10) / 10}g</span>
+                  <div className="bg-sky-50 rounded-lg p-2 border border-sky-100">
+                    <span className="block text-[9px] font-bold text-sky-600/80 uppercase">Carbos</span>
+                    <span className="font-bold text-brand-brown text-sm">{Math.round((autoNutrients.carbs + (parseFloat(carbs) || 0)) * 10) / 10}g</span>
                   </div>
-                  <div>
-                    <span className="block font-bold">Prote</span>
-                    <span className="text-brand-brown/80">{Math.round((autoNutrients.protein + (parseFloat(protein) || 0)) * 10) / 10}g</span>
+                  <div className="bg-rose-50 rounded-lg p-2 border border-rose-100">
+                    <span className="block text-[9px] font-bold text-rose-600/80 uppercase">Prote</span>
+                    <span className="font-bold text-brand-brown text-sm">{Math.round((autoNutrients.protein + (parseFloat(protein) || 0)) * 10) / 10}g</span>
                   </div>
-                  <div>
-                    <span className="block font-bold">Fibra</span>
-                    <span className="text-brand-brown/80">{Math.round((autoNutrients.fiber + (parseFloat(fiber) || 0)) * 10) / 10}g</span>
+                  <div className="bg-emerald-50 rounded-lg p-2 border border-emerald-100">
+                    <span className="block text-[9px] font-bold text-emerald-600/80 uppercase">Fibra</span>
+                    <span className="font-bold text-brand-brown text-sm">{Math.round((autoNutrients.fiber + (parseFloat(fiber) || 0)) * 10) / 10}g</span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-brand-brown mb-1">Peso de 1 Porción (g)</label>
-                  <input
-                    type="number"
-                    value={portionWeight}
-                    onChange={(e) => setPortionWeight(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-white placeholder-brand-brown/40"
-                    placeholder="Ej. 60"
-                  />
+                  <label className="block text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-1">Peso de 1 Porción (g)</label>
+                  <input type="number" value={portionWeight} onChange={(e) => setPortionWeight(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-brand-brown/12 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-brand-brown bg-white placeholder-brand-brown/25 text-sm input-premium transition-all" placeholder="Ej. 60" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-brand-brown mb-1">Conservación</label>
-                  <input
-                    type="text"
-                    value={conservation}
-                    onChange={(e) => setConservation(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-brand-brown/20 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-white placeholder-brand-brown/40"
-                    placeholder="Ej. Heladera: 7 días"
-                  />
+                  <label className="block text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-1">Conservación</label>
+                  <input type="text" value={conservation} onChange={(e) => setConservation(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-brand-brown/12 focus:outline-none focus:ring-2 focus:ring-brand-accent/30 text-brand-brown bg-white placeholder-brand-brown/25 text-sm input-premium transition-all" placeholder="Ej. Heladera: 7 días" />
                 </div>
               </div>
             </div>
@@ -1028,39 +1042,49 @@ const Recipes: React.FC<Props> = ({ userId }) => {
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 bg-brand-brown text-white py-4 rounded-xl font-bold hover:bg-[#4A2E21] transition shadow-lg text-lg font-serif"
+              className="flex-1 warm-gradient-brown text-white py-4 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg hover:shadow-xl text-lg font-serif btn-glow"
             >
-              {editingId ? 'Actualizar Receta' : 'Guardar Receta'}
+              {editingId ? '✓ Actualizar Receta' : '✓ Guardar Receta'}
             </button>
             {editingId && (
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-4 bg-brand-brown/10 text-brand-brown rounded-xl font-bold hover:bg-brand-brown/20 transition"
+                className="px-6 py-4 bg-brand-brown/5 text-brand-brown rounded-xl font-bold hover:bg-brand-brown/10 transition-all border border-brand-brown/10"
               >
                 Cancelar
               </button>
             )}
           </div>
         </form>
+        </div>
       </div >
 
       {/* LIST SECTION */}
       < div className="space-y-4" >
-        <h3 className="text-lg font-bold text-brand-brown pl-2 border-l-4 border-brand-brown font-serif">
-          Mis Recetas ({savedRecipes.length})
-        </h3>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl warm-gradient-brown flex items-center justify-center shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          </div>
+          <h3 className="text-lg font-bold text-brand-brown font-serif">
+            Mis Recetas <span className="text-brand-brown/40 font-sans text-sm font-normal">({savedRecipes.length})</span>
+          </h3>
+        </div>
 
         {
           savedRecipes.length === 0 ? (
-            <p className="text-center text-brand-brown/40 py-8 italic">No tienes recetas guardadas aún.</p>
+            <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-brand-brown/15">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-brand-brown/20 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              <p className="text-brand-brown/40 italic">No tienes recetas guardadas aún.</p>
+              <p className="text-brand-brown/30 text-sm mt-1">Crea tu primera receta arriba ☝️</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {savedRecipes.map(recipe => (
-                <div key={recipe.id} className={`bg-white p-5 rounded-2xl shadow-sm border ${recipe.showInCatalog ? 'border-green-300' : 'border-brand-brown/10'} flex flex-col justify-between hover:border-brand-brown/30 transition-all`}>
+                <div key={recipe.id} className={`bg-white p-5 rounded-2xl shadow-sm border ${recipe.showInCatalog ? 'border-green-300/60 shadow-green-100/50' : 'border-brand-brown/8'} flex flex-col justify-between card-hover-lift`}>
                   <div>
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1 min-w-0">
@@ -1301,7 +1325,8 @@ const Recipes: React.FC<Props> = ({ userId }) => {
       )}
 
       {successMsg && (
-        <div className="fixed bottom-20 md:bottom-10 left-4 right-4 bg-brand-brown text-white p-4 rounded-xl text-center shadow-lg animate-bounce z-50 font-serif">
+        <div className="fixed bottom-20 md:bottom-10 left-1/2 -translate-x-1/2 warm-gradient-brown text-white px-6 py-4 rounded-2xl text-center shadow-2xl animate-fade-in-up z-50 font-serif flex items-center gap-2 max-w-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           {successMsg}
         </div>
       )}
