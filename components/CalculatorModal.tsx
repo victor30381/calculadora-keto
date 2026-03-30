@@ -27,13 +27,13 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ isOpen, onClose, user
             <div className="relative w-full max-w-4xl glass-card-strong rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-fade-in-up">
 
                 {/* Header */}
-                <div className="flex justify-between items-center p-6 pb-2 border-b border-brand-brown/5">
-                    <div className="flex-1 text-center">
-                        <h2 className="text-2xl font-serif font-bold text-brand-brown">Calculadora Maestra</h2>
+                <div className="flex justify-between items-center p-4 sm:p-6 pb-2 border-b border-brand-brown/5 relative">
+                    <div className="flex-1 text-center px-8 sm:px-12">
+                        <h2 className="text-xl sm:text-2xl font-serif font-bold text-brand-brown">Calculadora Maestra</h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="absolute right-6 top-6 text-brand-brown/50 hover:text-brand-brown transition-colors"
+                        className="absolute right-4 top-4 sm:right-6 sm:top-6 text-brand-brown/50 hover:text-brand-brown transition-colors"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -41,61 +41,64 @@ const CalculatorModal: React.FC<CalculatorModalProps> = ({ isOpen, onClose, user
                     </button>
                 </div>
 
-                {/* Custom Folder Tabs */}
-                <div className="flex px-6 pt-6 gap-1 overflow-visible relative z-10">
-                    <button
-                        onClick={() => setActiveTab('inventory')}
-                        className={`
-                    px-6 py-3 rounded-t-xl font-bold text-sm transition-all duration-200 relative z-20
-                    ${activeTab === 'inventory'
-                                ? 'warm-gradient-brown text-white shadow-lg pb-4 -mb-1'
-                                : 'bg-brand-brown/5 text-brand-brown/50 hover:bg-brand-brown/10 hover:text-brand-brown pb-3'
-                            }
-                `}
-                    >
-                        Materia Prima
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('recipes')}
-                        className={`
-                    px-6 py-3 rounded-t-xl font-bold text-sm transition-all duration-200 relative z-10 -ml-2
-                    ${activeTab === 'recipes'
-                                ? 'warm-gradient-brown text-white shadow-lg pb-4 -mb-1 z-30'
-                                : 'bg-brand-brown/5 text-brand-brown/50 hover:bg-brand-brown/10 hover:text-brand-brown pb-3'
-                            }
-                `}
-                    >
-                        Recetas
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('calc')}
-                        className={`
-                    px-6 py-3 rounded-t-xl font-bold text-sm transition-all duration-200 relative -ml-2
-                    ${activeTab === 'calc'
-                                ? 'warm-gradient-brown text-white shadow-lg pb-4 -mb-1 z-30'
-                                : 'bg-brand-brown/5 text-brand-brown/50 hover:bg-brand-brown/10 hover:text-brand-brown pb-3 z-20'
-                            }
-                `}
-                    >
-                        Precio Venta (x3)
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('production')}
-                        className={`
-                    px-6 py-3 rounded-t-xl font-bold text-sm transition-all duration-200 relative -ml-2
-                    ${activeTab === 'production'
-                                ? 'warm-gradient-brown text-white shadow-lg pb-4 -mb-1 z-40'
-                                : 'bg-brand-brown/5 text-brand-brown/50 hover:bg-brand-brown/10 hover:text-brand-brown pb-3 z-10'
-                            }
-                `}
-                    >
-                        Proporciones
-                    </button>
+                {/* Modern Segmented Tabs */}
+                <div className="px-4 sm:px-6 pt-4 sm:pt-6">
+                    <div className="bg-brand-brown/5 p-1.5 rounded-2xl flex flex-wrap sm:flex-nowrap gap-1.5 relative z-10 w-full items-center">
+                        <button
+                            onClick={() => setActiveTab('inventory')}
+                            className={`
+                        flex-1 min-w-[45%] sm:min-w-0 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 text-center
+                        ${activeTab === 'inventory'
+                                    ? 'bg-white text-brand-brown shadow-md scale-100 z-10 border border-brand-brown/5'
+                                    : 'text-brand-brown/60 hover:text-brand-brown hover:bg-brand-brown/10 hover:scale-105'
+                                }
+                    `}
+                        >
+                            Materia Prima
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('recipes')}
+                            className={`
+                        flex-1 min-w-[45%] sm:min-w-0 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 text-center
+                        ${activeTab === 'recipes'
+                                    ? 'bg-white text-brand-brown shadow-md scale-100 z-10 border border-brand-brown/5'
+                                    : 'text-brand-brown/60 hover:text-brand-brown hover:bg-brand-brown/10 hover:scale-105'
+                                }
+                    `}
+                        >
+                            Recetas
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('calc')}
+                            className={`
+                        flex-1 min-w-[45%] sm:min-w-0 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 text-center
+                        ${activeTab === 'calc'
+                                    ? 'bg-white text-brand-brown shadow-md scale-100 z-10 border border-brand-brown/5'
+                                    : 'text-brand-brown/60 hover:text-brand-brown hover:bg-brand-brown/10 hover:scale-105'
+                                }
+                    `}
+                        >
+                            <span className="hidden sm:inline">Precio Venta (x3)</span>
+                            <span className="inline sm:hidden">Venta (x3)</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('production')}
+                            className={`
+                        flex-1 min-w-[45%] sm:min-w-0 py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 text-center
+                        ${activeTab === 'production'
+                                    ? 'bg-white text-brand-brown shadow-md scale-100 z-10 border border-brand-brown/5'
+                                    : 'text-brand-brown/60 hover:text-brand-brown hover:bg-brand-brown/10 hover:scale-105'
+                                }
+                    `}
+                        >
+                            Proporciones
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content Body */}
-                <div id="calc-modal-content" className="flex-1 overflow-y-auto p-0 bg-white/90 backdrop-blur border-t-4 border-brand-brown rounded-b-2xl relative z-20">
-                    <div className="p-6">
+                <div id="calc-modal-content" className="flex-1 overflow-y-auto p-0 bg-white/90 backdrop-blur rounded-b-2xl sm:rounded-2xl relative z-20 mt-2 border-t border-brand-brown/5">
+                    <div className="p-4 sm:p-6">
                         {activeTab === 'inventory' && <Ingredients userId={userId} />}
                         {activeTab === 'recipes' && <Recipes userId={userId} />}
                         {activeTab === 'calc' && <Calculator userId={userId} />}

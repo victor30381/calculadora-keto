@@ -930,26 +930,26 @@ const Recipes: React.FC<Props> = ({ userId }) => {
               {/* Total preview */}
               <div className="bg-white p-4 rounded-xl border border-brand-brown/10 shadow-sm">
                 <h4 className="text-[10px] font-bold text-brand-brown/60 uppercase tracking-wider mb-3">Total Calculado (Auto + Manual)</h4>
-                <div className="grid grid-cols-5 gap-2 text-center">
-                  <div className="bg-orange-50 rounded-lg p-2 border border-orange-100">
-                    <span className="block text-[9px] font-bold text-orange-600/80 uppercase">Kcal</span>
-                    <span className="font-bold text-brand-brown text-sm">{Math.round(autoNutrients.calories + (parseFloat(calories) || 0))}</span>
+                <div className="grid grid-cols-5 gap-1 sm:gap-2 text-center">
+                  <div className="bg-orange-50 rounded-lg p-1 sm:p-2 border border-orange-100">
+                    <span className="block text-[8px] sm:text-[9px] font-bold text-orange-600/80 uppercase">Kcal</span>
+                    <span className="font-bold text-brand-brown text-xs sm:text-sm">{Math.round(autoNutrients.calories + (parseFloat(calories) || 0))}</span>
                   </div>
-                  <div className="bg-amber-50 rounded-lg p-2 border border-amber-100">
-                    <span className="block text-[9px] font-bold text-amber-600/80 uppercase">Grasas</span>
-                    <span className="font-bold text-brand-brown text-sm">{Math.round((autoNutrients.fat + (parseFloat(fat) || 0)) * 10) / 10}g</span>
+                  <div className="bg-amber-50 rounded-lg p-1 sm:p-2 border border-amber-100">
+                    <span className="block text-[8px] sm:text-[9px] font-bold text-amber-600/80 uppercase">Grasas</span>
+                    <span className="font-bold text-brand-brown text-xs sm:text-sm">{Math.round((autoNutrients.fat + (parseFloat(fat) || 0)) * 10) / 10}g</span>
                   </div>
-                  <div className="bg-sky-50 rounded-lg p-2 border border-sky-100">
-                    <span className="block text-[9px] font-bold text-sky-600/80 uppercase">Carbos</span>
-                    <span className="font-bold text-brand-brown text-sm">{Math.round((autoNutrients.carbs + (parseFloat(carbs) || 0)) * 10) / 10}g</span>
+                  <div className="bg-sky-50 rounded-lg p-1 sm:p-2 border border-sky-100">
+                    <span className="block text-[8px] sm:text-[9px] font-bold text-sky-600/80 uppercase">Carbos</span>
+                    <span className="font-bold text-brand-brown text-xs sm:text-sm">{Math.round((autoNutrients.carbs + (parseFloat(carbs) || 0)) * 10) / 10}g</span>
                   </div>
-                  <div className="bg-rose-50 rounded-lg p-2 border border-rose-100">
-                    <span className="block text-[9px] font-bold text-rose-600/80 uppercase">Prote</span>
-                    <span className="font-bold text-brand-brown text-sm">{Math.round((autoNutrients.protein + (parseFloat(protein) || 0)) * 10) / 10}g</span>
+                  <div className="bg-rose-50 rounded-lg p-1 sm:p-2 border border-rose-100">
+                    <span className="block text-[8px] sm:text-[9px] font-bold text-rose-600/80 uppercase">Prote</span>
+                    <span className="font-bold text-brand-brown text-xs sm:text-sm">{Math.round((autoNutrients.protein + (parseFloat(protein) || 0)) * 10) / 10}g</span>
                   </div>
-                  <div className="bg-emerald-50 rounded-lg p-2 border border-emerald-100">
-                    <span className="block text-[9px] font-bold text-emerald-600/80 uppercase">Fibra</span>
-                    <span className="font-bold text-brand-brown text-sm">{Math.round((autoNutrients.fiber + (parseFloat(fiber) || 0)) * 10) / 10}g</span>
+                  <div className="bg-emerald-50 rounded-lg p-1 sm:p-2 border border-emerald-100">
+                    <span className="block text-[8px] sm:text-[9px] font-bold text-emerald-600/80 uppercase">Fibra</span>
+                    <span className="font-bold text-brand-brown text-xs sm:text-sm">{Math.round((autoNutrients.fiber + (parseFloat(fiber) || 0)) * 10) / 10}g</span>
                   </div>
                 </div>
               </div>

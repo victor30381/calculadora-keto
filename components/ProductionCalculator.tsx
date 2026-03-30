@@ -274,9 +274,9 @@ const ProductionCalculator: React.FC<Props> = ({ userId }) => {
                 const details = getIngredientDetails(ing);
                 const needed = ing.quantityUsed * factor;
                 return (
-                  <li key={idx} className="flex justify-between items-center bg-brand-beige/30 p-2 sm:p-3 rounded-lg border border-brand-brown/5">
+                  <li key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 bg-brand-beige/30 p-3 rounded-lg border border-brand-brown/5">
                     <span className="font-medium text-brand-brown">{details.name}</span>
-                    <span className="font-bold text-brand-brown bg-white px-3 py-1 rounded-md shadow-sm border border-brand-brown/10">{formatQuantity(needed, details.baseUnit)}</span>
+                    <span className="font-bold text-brand-brown bg-white px-3 py-1 rounded-md shadow-sm border border-brand-brown/10 self-end sm:self-auto">{formatQuantity(needed, details.baseUnit)}</span>
                   </li>
                 );
               })}
