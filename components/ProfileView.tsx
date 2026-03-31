@@ -246,7 +246,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
                   value={profileData.companyName}
                   onChange={handleInputChange}
                   className="w-full p-4 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-brand-cream placeholder-stone-400 transition-all font-medium"
-                  placeholder="Ej: KetoCost Bakery"
+                  placeholder="Ej: AlternativaKeto"
                 />
               </div>
 

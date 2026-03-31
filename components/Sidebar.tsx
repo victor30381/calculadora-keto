@@ -175,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, activeTab, set
                     </nav>
 
                     <div className="text-center text-[10px] text-brand-brown/30 font-medium mt-4 tracking-wider uppercase">
-                        &copy; 2025 KetoCost Bakery
+                        &copy; 2025 AlternativaKeto
                     </div>
                 </div>
             </aside>
