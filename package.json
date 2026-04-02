@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://victor30381.github.io/calculadora-keto",
+  "homepage": "https://www.alternativaketo.com",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
