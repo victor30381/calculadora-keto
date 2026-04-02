@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../firebase';
+import { db, storage, functions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
 import { collection, query, where, onSnapshot, updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Recipe } from '../types';
@@ -19,6 +20,7 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ userId, user }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [sections, setSections] = useState<string[]>([]);
     const [newSectionName, setNewSectionName] = useState('');
+    const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
     useEffect(() => {
         if (!userId) return;
@@ -153,6 +155,37 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ userId, user }) => {
         } catch (err) {
             console.error(err);
             alert('Error al eliminar imagen');
+        }
+    };
+
+    const handleGenerateDescription = async (recipe: Recipe) => {
+        try {
+            setIsGeneratingDescription(true);
+            const generateDescription = httpsCallable(functions, 'generateDescription');
+            
+            let ingredientsText = "";
+            if (recipe.ingredients && recipe.ingredients.length > 0) {
+               ingredientsText = \`Poseé \${recipe.ingredients.length} ingredientes. \`;
+            }
+            if (recipe.nutritionalInfo) {
+               ingredientsText += \`Macros por porción: \${recipe.nutritionalInfo.calories} Kcal, \${recipe.nutritionalInfo.protein}g Proteína, \${recipe.nutritionalInfo.carbs}g Carbohidratos (Bajos), \${recipe.nutritionalInfo.fat}g Grasas.\`;
+            }
+
+            const result = await generateDescription({
+                recipeName: recipe.name,
+                ingredientsText,
+                imageUrls: recipe.catalogImages || []
+            });
+            
+            const data = result.data as { description: string };
+            if (data?.description) {
+                setTempDescription(data.description);
+            }
+        } catch (error: any) {
+            console.error("AI Error:", error);
+            alert("Hubo un error al generar la descripción: " + error.message);
+        } finally {
+            setIsGeneratingDescription(false);
         }
     };
 
@@ -296,7 +329,22 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ userId, user }) => {
                                     <p className="text-[10px] text-brand-brown/40 mt-1 pl-1">Costo real de receta: ${recipe.totalCost.toFixed(2)}</p>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold text-brand-brown/60 mb-1 uppercase">Descripción Larga (Opcional)</label>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-[11px] font-bold text-brand-brown/60 uppercase">Descripción Larga (Opcional)</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleGenerateDescription(recipe)}
+                                            disabled={isGeneratingDescription}
+                                            className="flex items-center gap-1 text-[10px] font-bold text-white bg-gradient-to-r from-purple-500 to-indigo-600 px-2 py-1 rounded shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                                            title="Generar copy con Inteligencia Artificial"
+                                        >
+                                            {isGeneratingDescription ? (
+                                                <span className="flex items-center gap-1">
+                                                    <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                </span>
+                                            ) : '✨ Auto-Copy'}
+                                        </button>
+                                    </div>
                                     <textarea 
                                         value={tempDescription} 
                                         onChange={(e) => setTempDescription(e.target.value)}

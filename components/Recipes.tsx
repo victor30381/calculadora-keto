@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { collection, addDoc, query, where, onSnapshot, QuerySnapshot, DocumentData, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../firebase';
 import { Ingredient, Recipe, getConversionFactor, Unit, formatQuantity } from '../types';
 
 interface Props {
@@ -53,6 +54,7 @@ const Recipes: React.FC<Props> = ({ userId }) => {
   // Feedback States
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isGeneratingNutrition, setIsGeneratingNutrition] = useState(false);
 
   // 1. Fetch Ingredients (for the dropdowns)
   useEffect(() => {
@@ -82,6 +84,60 @@ const Recipes: React.FC<Props> = ({ userId }) => {
     );
     return () => unsubscribe();
   }, [userId]);
+
+  const handleGenerateNutrition = async () => {
+    if (!recipeName || ingredientsList.length === 0) {
+      alert("Por favor, ingresa el nombre de la receta y al menos un ingrediente antes de usar la IA.");
+      return;
+    }
+
+    setIsGeneratingNutrition(true);
+    try {
+      let ingredientsText = "";
+      ingredientsList.forEach((ing) => {
+        let name = "Desconocido";
+        let displayQty = "";
+        
+        if (ing.type === 'recipe') {
+          const recipe = savedRecipes.find(r => r.id === ing.ingredientId);
+          if (recipe) {
+            name = recipe.name;
+            displayQty = formatQuantity(ing.quantityUsed, recipe.portionWeight ? Unit.UN : Unit.GR);
+          }
+        } else {
+          const fullIng = availableIngredients.find(i => i.id === ing.ingredientId);
+          if (fullIng) {
+            name = fullIng.name;
+            displayQty = formatQuantity(ing.quantityUsed, fullIng.unit);
+          }
+        }
+        ingredientsText += `- ${name}: ${displayQty}\n`;
+      });
+
+      const generateNutrition = httpsCallable(functions, "generateNutrition");
+      
+      const response = await generateNutrition({
+        recipeName: recipeName,
+        ingredientsText: ingredientsText,
+      });
+
+      const data = response.data as { calories: number; protein: number; carbs: number; fat: number; fiber: number };
+      
+      setCalories(data.calories?.toString() || "0");
+      setProtein(data.protein?.toString() || "0");
+      setCarbs(data.carbs?.toString() || "0");
+      setFat(data.fat?.toString() || "0");
+      setFiber(data.fiber?.toString() || "0");
+      
+      setSuccessMsg("¡Valores nutricionales calculados con IA!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (error: any) {
+      console.error("Error generating nutrition:", error);
+      alert("Hubo un error al calcular con IA: " + error.message);
+    } finally {
+      setIsGeneratingNutrition(false);
+    }
+  };
 
   const addIngredientRow = () => {
     setIngredientsList([...ingredientsList, { ingredientId: '', type: 'ingredient', quantityUsed: '', unitUsed: 'gr' }]);
@@ -889,15 +945,60 @@ const Recipes: React.FC<Props> = ({ userId }) => {
           {/* Nutritional Info Section */}
           {!isPromoMode && (
             <div className="bg-gradient-to-br from-brand-beige/60 to-white p-5 rounded-2xl border border-brand-brown/10 space-y-4">
-              <div className="flex items-center gap-2 pb-3 border-b border-brand-brown/8">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              <div className="flex items-center gap-2 pb-3 border-b border-brand-brown/8 justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-brand-brown leading-tight">Información Nutricional</h3>
+                    <p className="text-[10px] text-brand-brown/50">Sub-recetas se suman automáticamente. Ingresa solo valores adicionales.</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-brand-brown leading-tight">Información Nutricional</h3>
-                  <p className="text-[10px] text-brand-brown/50">Sub-recetas se suman automáticamente. Ingresa solo valores adicionales.</p>
-                </div>
+                
+                <button
+                  type="button"
+                  onClick={handleGenerateNutrition}
+                  disabled={isGeneratingNutrition || !recipeName || ingredientsList.length === 0}
+                  className="hidden sm:flex text-xs bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold hover:shadow-md transition-all items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingNutrition ? (
+                    <span className="flex items-center gap-1.5">
+                      <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                      Calculando...
+                    </span>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                      </svg>
+                      Auto-Completar IA ✨
+                    </>
+                  )}
+                </button>
               </div>
+
+              {/* Mobile button */}
+              <button
+                type="button"
+                onClick={handleGenerateNutrition}
+                disabled={isGeneratingNutrition || !recipeName || ingredientsList.length === 0}
+                className="sm:hidden w-full flex text-xs bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-3 py-2 rounded-lg font-bold hover:shadow-md transition-all justify-center items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed mb-2"
+              >
+                {isGeneratingNutrition ? (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Calculando...
+                  </span>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                    </svg>
+                    Auto-Completar con IA ✨
+                  </>
+                )}
+              </button>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
