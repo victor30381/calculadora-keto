@@ -36,11 +36,16 @@ function App() {
   useEffect(() => {
     const checkHash = () => {
       const hash = window.location.hash;
+      const isAdmin = hash === '#/admin' || hash === '/admin' || hash === '#admin';
       const match = hash.match(/^\/catalogo\/(.+)$/) || hash.match(/^#\/catalogo\/(.+)$/);
-      if (match) {
-        setCatalogUserId(match[1]);
+      
+      if (isAdmin) {
+        setCatalogUserId(null); // Permite el inicio de sesión y uso de la herramienta
+      } else if (match) {
+        setCatalogUserId(match[1]); // URLs de catálogo anteriores
       } else {
-        setCatalogUserId(null);
+        // Redirigir el dominio sin extensión al catálogo del usuario por defecto
+        setCatalogUserId('RysiSSYHT7QFcxhmdbkvDLpUqWG2');
       }
     };
     checkHash();
