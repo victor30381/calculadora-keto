@@ -165,10 +165,10 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ userId, user }) => {
             
             let ingredientsText = "";
             if (recipe.ingredients && recipe.ingredients.length > 0) {
-               ingredientsText = \`Poseé \${recipe.ingredients.length} ingredientes. \`;
+               ingredientsText = `Posee ${recipe.ingredients.length} ingredientes. `;
             }
             if (recipe.nutritionalInfo) {
-               ingredientsText += \`Macros por porción: \${recipe.nutritionalInfo.calories} Kcal, \${recipe.nutritionalInfo.protein}g Proteína, \${recipe.nutritionalInfo.carbs}g Carbohidratos (Bajos), \${recipe.nutritionalInfo.fat}g Grasas.\`;
+               ingredientsText += `Macros por porción: ${recipe.nutritionalInfo.calories} Kcal, ${recipe.nutritionalInfo.protein}g Proteína, ${recipe.nutritionalInfo.carbs}g Carbohidratos (Bajos), ${recipe.nutritionalInfo.fat}g Grasas.`;
             }
 
             const result = await generateDescription({
