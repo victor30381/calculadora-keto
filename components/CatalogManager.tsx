@@ -209,13 +209,13 @@ const CatalogManager: React.FC<CatalogManagerProps> = ({ userId, user }) => {
                                 <input
                                     type="text"
                                     readOnly
-                                    value="https://www.alternativaketo.com"
+                                    value="www.alternativaketo.com"
                                     className="p-3 rounded-xl border border-brand-brown/20 bg-white text-brand-brown text-sm font-medium outline-none text-center sm:text-left shadow-sm min-w-[250px]"
                                     onClick={(e) => (e.target as HTMLInputElement).select()}
                                 />
                                 <button
                                     onClick={() => {
-                                        navigator.clipboard.writeText("https://www.alternativaketo.com");
+                                        navigator.clipboard.writeText("www.alternativaketo.com");
                                         alert('¡Enlace copiado al portapapeles!');
                                     }}
                                     className="px-6 py-3 bg-brand-brown text-white font-bold rounded-xl hover:bg-[#5D4229] transition-colors whitespace-nowrap shadow-md text-sm"
