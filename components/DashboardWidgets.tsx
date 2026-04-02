@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Order } from '../types';
 import { db } from '../firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -11,6 +12,153 @@ interface DeliveryListProps {
     onEdit?: (order: Order) => void;
     onView?: (order: Order) => void;
 }
+
+const DeliveredHistoryModal: React.FC<{
+    orders: Order[];
+    onClose: () => void;
+    onView?: (order: Order) => void;
+    onEdit?: (order: Order) => void;
+    handleToggleStatus: (order: Order) => void;
+    handleDeleteClick: (orderId: string) => void;
+    confirmingDeleteId: string | null;
+}> = ({ orders, onClose, onView, onEdit, handleToggleStatus, handleDeleteClick, confirmingDeleteId }) => {
+    const [filter, setFilter] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('all');
+    const [customDate, setCustomDate] = useState<string>('');
+
+    const filteredOrders = orders.filter(o => {
+        if (filter === 'all') return true;
+        
+        const d = new Date(o.deliveryDate);
+        const today = new Date();
+        
+        if (filter === 'today') {
+            return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+        }
+        
+        if (filter === 'week') {
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const startOfWeek = new Date(startOfToday);
+            startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay() + (startOfToday.getDay() === 0 ? -6 : 1)); // Lunes
+            const dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            return dDate >= startOfWeek;
+        }
+
+        if (filter === 'month') {
+            return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+        }
+
+        if (filter === 'custom' && customDate) {
+            const [year, month, day] = customDate.split('-').map(Number);
+            return d.getDate() === day && d.getMonth() === month - 1 && d.getFullYear() === year;
+        }
+
+        return true;
+    });
+
+    const modalContent = (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-fade-in">
+            <div className="absolute inset-0" onClick={onClose}></div>
+            <div className="relative w-full max-w-2xl glass-card-strong sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden bg-white/90 max-h-[90vh]">
+                <div className="p-5 sm:p-6 border-b border-brand-brown/10 flex justify-between items-center bg-white/50 backdrop-blur-sm z-10 sticky top-0">
+                    <h3 className="font-serif font-bold text-xl text-brand-brown flex items-center gap-2">
+                        <span>📦</span> Historial de Entregados
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        className="p-2 text-brand-brown/40 hover:text-brand-brown hover:bg-brand-brown/10 rounded-full transition-colors border border-transparent hover:border-brand-brown/10 shadow-sm"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <div className="p-4 sm:p-6 flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="flex flex-wrap items-center gap-2 mb-6">
+                        {['all', 'today', 'week', 'month'].map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f as any)}
+                                className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${filter === f ? 'warm-gradient-brown text-white shadow-md' : 'bg-white/80 text-brand-brown/60 hover:bg-white border border-brand-brown/10'}`}
+                            >
+                                {f === 'all' ? 'Todos' : f === 'today' ? 'Hoy' : f === 'week' ? 'Esta Semana' : 'Este Mes'}
+                            </button>
+                        ))}
+                        <div className="relative flex items-center">
+                            <input 
+                                type="date"
+                                value={customDate}
+                                onChange={(e) => {
+                                    setCustomDate(e.target.value);
+                                    if(e.target.value) setFilter('custom');
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-sm font-bold border outline-none bg-white/80 transition-all ${filter === 'custom' ? 'border-brand-accent text-brand-brown ring-1 ring-brand-accent/30 shadow-sm' : 'border-brand-brown/10 text-brand-brown/60 hover:border-brand-brown/30'}`}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {filteredOrders.length > 0 ? (
+                            filteredOrders.map((order) => (
+                                <div
+                                    key={order.id}
+                                    onClick={() => onView && onView(order)}
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 last:border-0 group cursor-pointer transition-all duration-200 rounded-xl p-3 opacity-80 hover:opacity-100 hover:bg-white/60 bg-white/30"
+                                >
+                                    <div className="text-sm text-brand-brown mb-2 sm:mb-0">
+                                        <span className="font-bold block text-brand-brown/50 text-xs">
+                                            {new Date(order.deliveryDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        </span>
+                                        <span className="font-medium text-brand-brown/80">
+                                            {order.items.map(item => item.name).join(', ')}
+                                        </span>
+                                        <span className="text-stone-500 block text-sm font-bold mt-0.5">({order.clientName})</span>
+                                    </div>
+
+                                    <div className="flex gap-1.5 shrink-0 transition-opacity duration-200">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onView && onView(order); }}
+                                            className="p-1.5 text-xs bg-white/80 backdrop-blur border border-brand-brown/10 rounded-lg hover:bg-blue-50 text-brand-brown shadow-sm transition-colors"
+                                            title="Ver Pedido"
+                                        >
+                                            👁️
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(order); }}
+                                            className="p-1.5 text-xs bg-white/80 backdrop-blur border border-brand-brown/10 rounded-lg hover:bg-brand-accent/10 text-brand-brown shadow-sm transition-colors"
+                                            title="Marcar Pendiente"
+                                        >
+                                            ↩️
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onEdit && onEdit(order); }}
+                                            className="p-1.5 text-xs bg-white/80 backdrop-blur border border-brand-brown/10 rounded-lg hover:bg-brand-accent/10 text-brand-brown shadow-sm transition-colors"
+                                            title="Editar"
+                                        >
+                                            ✏️
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(order.id); }}
+                                            className={`p-1.5 text-xs backdrop-blur border rounded-lg shadow-sm transition-all ${confirmingDeleteId === order.id
+                                                ? 'border-red-400 bg-red-500 text-white hover:bg-red-600'
+                                                : 'bg-white/80 border-red-200/50 hover:bg-red-50 text-red-500'
+                                                }`}
+                                            title="Eliminar"
+                                        >
+                                            {confirmingDeleteId === order.id ? '¿Borrar?' : '🗑️'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-brand-brown/30 italic text-center py-8 text-sm">No hay pedidos entregados en este periodo</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    return createPortal(modalContent, document.body);
+};
 
 export const DeliveryList: React.FC<DeliveryListProps> = ({ orders, onEdit, onView }) => {
     // Filter for upcoming orders (pending and future/today)
@@ -25,6 +173,7 @@ export const DeliveryList: React.FC<DeliveryListProps> = ({ orders, onEdit, onVi
         .sort((a, b) => new Date(b.deliveryDate).getTime() - new Date(a.deliveryDate).getTime()); // Most recent first
 
     const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
 
     const handleToggleStatus = async (order: Order) => {
         try {
@@ -138,7 +287,7 @@ export const DeliveryList: React.FC<DeliveryListProps> = ({ orders, onEdit, onVi
                         <span>📦</span> Entregados Recientemente
                     </h3>
                     <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        {deliveredOrders.map((order) => (
+                        {deliveredOrders.slice(0, 5).map((order) => (
                             <div
                                 key={order.id}
                                 onClick={() => onView && onView(order)}
@@ -192,7 +341,29 @@ export const DeliveryList: React.FC<DeliveryListProps> = ({ orders, onEdit, onVi
                             </div>
                         ))}
                     </div>
+                    {deliveredOrders.length > 5 && (
+                        <div className="mt-4 text-center">
+                            <button
+                                onClick={() => setShowHistoryModal(true)}
+                                className="text-xs font-bold text-brand-brown hover:text-brand-accent transition-colors underline underline-offset-2 opacity-80 hover:opacity-100"
+                            >
+                                Ver historial completo ({deliveredOrders.length})
+                            </button>
+                        </div>
+                    )}
                 </div>
+            )}
+            
+            {showHistoryModal && (
+                <DeliveredHistoryModal
+                    orders={deliveredOrders}
+                    onClose={() => setShowHistoryModal(false)}
+                    onView={onView}
+                    onEdit={onEdit}
+                    handleToggleStatus={handleToggleStatus}
+                    handleDeleteClick={handleDeleteClick}
+                    confirmingDeleteId={confirmingDeleteId}
+                />
             )}
         </div>
     );
