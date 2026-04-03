@@ -302,6 +302,9 @@ const Calculator: React.FC<Props> = ({ userId }) => {
           doc.setFont("helvetica", "normal");
           doc.text("@alternativaketo", 40, currentY, { align: "center" });
 
+          currentY += 5;
+          doc.text("www.alternativaketo.com", 40, currentY, { align: "center" });
+
           if (isReseller && ingredients.length > 0) {
             const recipeIngredients = selectedRecipe.ingredients.map(ri => {
               const ing = ingredients.find(i => i.id === ri.ingredientId);

@@ -348,6 +348,10 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(10);
                     doc.text("@alternativaketo", startX + iconSize + 2, iconY + 5);
+                    
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(9);
+                    doc.text("www.alternativaketo.com", 40, iconY + 12, { align: "center" });
 
                     // Output: Open in New Tab
                     const pdfBlob = doc.output('blob');
