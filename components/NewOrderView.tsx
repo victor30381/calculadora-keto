@@ -128,6 +128,16 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
 
             const updatedItem = { ...item, [field]: value };
 
+            if (field === 'recipeId' || field === 'amount' || field === 'quantity') {
+                const rId = updatedItem.recipeId;
+                if (rId) {
+                    const recipe = recipes.find(r => r.id === rId);
+                    if (recipe) {
+                        updatedItem.cost = recipe.isPromo ? (recipe.totalCost * updatedItem.quantity) : (updatedItem.amount * recipe.costPerGram * updatedItem.quantity);
+                    }
+                }
+            }
+
             // Logic: Select Recipe -> Set Name, Keep ID, Recalc Price if Amount exists
             if (field === 'recipeId') {
                 const recipe = recipes.find(r => r.id === value);
@@ -426,11 +436,26 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
             normalizedToday.setHours(0, 0, 0, 0);
             const isPastDate = dateObj < normalizedToday;
 
+            // Ensure cost is snapshotted for all items, even old ones
+            const itemsWithCost = items.map(item => {
+                if (item.cost !== undefined) return item;
+                
+                // Fallback snapshot logic for items that didn't have cost set yet
+                let fallbackCost = item.price / 3;
+                if (item.recipeId) {
+                    const recipe = recipes.find(r => r.id === item.recipeId);
+                    if (recipe) {
+                        fallbackCost = recipe.isPromo ? recipe.totalCost * item.quantity : item.amount * recipe.costPerGram * item.quantity;
+                    }
+                }
+                return { ...item, cost: fallbackCost };
+            });
+
             const orderData: Omit<Order, 'id'> = {
                 userId,
                 clientId: selectedClientId,
                 clientName: client?.name || 'Cliente Desconocido',
-                items: items,
+                items: itemsWithCost,
                 deliveryDate: dateObj,
                 deliveryTime: deliveryTime || '',
                 status: isPastDate ? 'completed' : 'pending',

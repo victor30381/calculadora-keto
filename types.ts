@@ -124,6 +124,7 @@ export interface OrderItem {
   unit: string; // "gr/ml/un"
   quantity: number; // 1
   price: number; // 3555
+  cost?: number; // Snapshot of the actual cost at the time of order
 }
 
 export interface Order {

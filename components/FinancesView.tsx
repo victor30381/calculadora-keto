@@ -74,7 +74,10 @@ const FinancesView: React.FC<FinancesViewProps> = ({ userId }) => {
 
     const calculateOrderCost = (order: Order) => {
         return order.items.reduce((sum, item: any) => {
-            const recipe = recipes.find(r => r.id === item.recipeId);
+            if (item.cost != null) {
+                return sum + item.cost;
+            }
+            const recipe = recipes.find(r => r.id === item.recipeId || r.id === item.id);
             if (recipe) {
                 if (recipe.isPromo) {
                     // Costo total de promo * cantidad

@@ -333,6 +333,7 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
                 unit: 'un',
                 quantity: item.quantity,
                 price: item.recipe.catalogPrice || 0,
+                cost: item.recipe.isPromo ? (item.recipe.totalCost * item.quantity) : ((item.recipe.totalYieldWeight || 0) * item.recipe.costPerGram * item.quantity),
             }));
 
             await addDoc(collection(db, 'orders'), {
@@ -378,8 +379,10 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
         }
     };
 
-    // Set min date to today
-    const today = new Date().toISOString().split('T')[0];
+    // Set min date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const minDateAvailable = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 
     if (loading) {
         return (
@@ -902,7 +905,7 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
                                         type="date"
                                         value={deliveryDate}
                                         onChange={e => setDeliveryDate(e.target.value)}
-                                        min={today}
+                                        min={minDateAvailable}
                                         className="w-full p-3 rounded-xl border border-brand-brown/20 focus:ring-2 focus:ring-brand-accent/50 outline-none bg-white"
                                         required
                                     />

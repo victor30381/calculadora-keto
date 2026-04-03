@@ -73,7 +73,7 @@ const Calculator: React.FC<Props> = ({ userId }) => {
       console.log("Iniciando generación de PDF...");
       // alert("Iniciando generación de PDF..."); 
 
-      const finalHeight = isReseller ? 160 : 200;
+      const finalHeight = isReseller ? 180 : 220;
 
       const doc = new jsPDF({
         orientation: 'portrait',

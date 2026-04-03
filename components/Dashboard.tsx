@@ -49,7 +49,10 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, onEditOrder, onViewOrder,
     // Helper: Calculate Material Cost for an Order
     const calculateOrderCost = (order: Order) => {
         return order.items.reduce((sum, item: any) => {
-            const recipe = recipes.find(r => r.id === item.recipeId);
+            if (item.cost != null) {
+                return sum + item.cost;
+            }
+            const recipe = recipes.find(r => r.id === item.recipeId || r.id === item.id);
             if (recipe) {
                 if (recipe.isPromo) {
                     return sum + (recipe.totalCost * item.quantity);
