@@ -80,6 +80,8 @@ Nombre: ${recipeName}
 ${ingredientsText ? `Ingredientes principales: \n${ingredientsText}` : ''}
 
 La descripción DEBE cumplir esto rígidamente:
+- Tener un tono casual, cercano y amigable.
+- Utilizar un lenguaje sencillo, sin palabras complejas o rimbombantes.
 - No tener más de 40-50 palabras en total.
 - Ser muy apetitosa y destacar que es un producto premium.
 - Resaltar que es saludable (keto, sin azúcar, bajo en carbohidratos).

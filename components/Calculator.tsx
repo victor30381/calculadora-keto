@@ -107,7 +107,7 @@ const Calculator: React.FC<Props> = ({ userId }) => {
 
           // Divider Line (Bold)
           doc.setLineWidth(1);
-          doc.line(5, currentY, 75, currentY);
+          doc.line(1, currentY, 79, currentY);
           currentY += 3;
 
           if (!isReseller) {
@@ -119,7 +119,7 @@ const Calculator: React.FC<Props> = ({ userId }) => {
 
             // Divider Line (Bold)
             doc.setLineWidth(1);
-            doc.line(5, currentY, 75, currentY);
+            doc.line(1, currentY, 79, currentY);
             currentY += 4;
           }
 
@@ -128,7 +128,7 @@ const Calculator: React.FC<Props> = ({ userId }) => {
           currentY += 2;
 
           doc.setLineWidth(0.5);
-          doc.line(5, currentY + 2, 75, currentY + 2);
+          doc.line(1, currentY + 2, 79, currentY + 2);
           currentY += 6;
 
           // Portion Info
@@ -143,18 +143,18 @@ const Calculator: React.FC<Props> = ({ userId }) => {
           currentY += 2;
 
           doc.setLineWidth(0.5);
-          doc.line(5, currentY + 2, 75, currentY + 2);
+          doc.line(1, currentY + 2, 79, currentY + 2);
           currentY += 6;
 
           // Nutrients Table Headers
           doc.setFontSize(9);
           doc.setFont("helvetica", "bold");
-          doc.text("NUTRIENTE", 5, currentY);
-          doc.text("CANT.", 75, currentY, { align: "right" });
+          doc.text("NUTRIENTE", 1, currentY);
+          doc.text("CANT.", 79, currentY, { align: "right" });
           currentY += 2;
 
           doc.setLineWidth(0.5);
-          doc.line(5, currentY, 75, currentY);
+          doc.line(1, currentY, 79, currentY);
           currentY += 5;
 
           // Nutrients Data Calculation
@@ -189,33 +189,33 @@ const Calculator: React.FC<Props> = ({ userId }) => {
           nutrients.forEach(nut => {
             doc.setFontSize(10);
             doc.setFont("helvetica", "bold");
-            doc.text(nut.label, 5, currentY);
-            doc.text(nut.value, 75, currentY, { align: "right" });
+            doc.text(nut.label, 1, currentY);
+            doc.text(nut.value, 79, currentY, { align: "right" });
             currentY += 5;
           });
 
           // Divider after nutrients
           doc.setLineWidth(1);
-          doc.line(5, currentY, 75, currentY);
+          doc.line(1, currentY, 79, currentY);
           currentY += 5;
 
           // CONSERVACIÓN Section
           if (selectedRecipe.conservation) {
             doc.setFontSize(10);
             doc.setFont("helvetica", "bold");
-            doc.text("CONSERVACIÓN:", 5, currentY);
+            doc.text("CONSERVACIÓN:", 1, currentY);
             currentY += 4;
 
             doc.setFontSize(10);
             doc.setFont("helvetica", "italic"); // Italic for conservation text details
-            const conservationLines = doc.splitTextToSize(selectedRecipe.conservation.toUpperCase(), 70);
-            doc.text(conservationLines, 5, currentY);
+            const conservationLines = doc.splitTextToSize(selectedRecipe.conservation.toUpperCase(), 78);
+            doc.text(conservationLines, 1, currentY);
             currentY += (conservationLines.length * 4) + 2;
           }
 
           // BOX: MANTENGA EN LUGAR FRESCO
           doc.setLineWidth(0.5);
-          doc.rect(5, currentY, 70, 8);
+          doc.rect(1, currentY, 78, 8);
           doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
           doc.text("MANTENGA EN LUGAR FRESCO", 40, currentY + 5.5, { align: "center" });
@@ -223,7 +223,7 @@ const Calculator: React.FC<Props> = ({ userId }) => {
 
           // Divider
           doc.setLineWidth(1);
-          doc.line(5, currentY, 75, currentY);
+          doc.line(1, currentY, 79, currentY);
           currentY += 5;
 
           // Dates
@@ -238,23 +238,23 @@ const Calculator: React.FC<Props> = ({ userId }) => {
 
           doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
-          doc.text(`ELAB: ${elabDate}`, 5, currentY);
+          doc.text(`ELAB: ${elabDate}`, 1, currentY);
           currentY += 4;
-          doc.text(`VENCE: ${venceDate}`, 5, currentY);
+          doc.text(`VENCE: ${venceDate}`, 1, currentY);
           currentY += 5;
 
           if (!isReseller) {
             // NET WEIGHT BOX
             if (selectedRecipe.isPromo) {
               doc.setLineWidth(1);
-              doc.rect(5, currentY, 70, 8);
+              doc.rect(1, currentY, 78, 8);
               doc.setFontSize(11);
               doc.setFont("helvetica", "bold");
               doc.text(`CANTIDAD: ${weight} UN`, 40, currentY + 5.5, { align: "center" });
               currentY += 10;
             } else {
               doc.setLineWidth(1);
-              doc.rect(5, currentY, 70, 8);
+              doc.rect(1, currentY, 78, 8);
               doc.setFontSize(12);
               doc.setFont("helvetica", "bold");
               doc.text(`NETO: ${weight}G`, 40, currentY + 5.5, { align: "center" });
@@ -278,8 +278,8 @@ const Calculator: React.FC<Props> = ({ userId }) => {
              
             doc.setFontSize(8);
             doc.setFont("helvetica", "bold");
-            const promoLines = doc.splitTextToSize(promoItemsText, 70);
-            doc.text(promoLines, 5, currentY);
+            const promoLines = doc.splitTextToSize(promoItemsText, 78);
+            doc.text(promoLines, 1, currentY);
             currentY += (promoLines.length * 3) + 3;
           }
 
@@ -303,7 +303,9 @@ const Calculator: React.FC<Props> = ({ userId }) => {
           doc.text("@alternativaketo", 40, currentY, { align: "center" });
 
           currentY += 5;
-          doc.text("www.alternativaketo.com", 40, currentY, { align: "center" });
+          doc.setFontSize(11); // Increased from 9
+          doc.setFont("helvetica", "bold"); // Made bold
+          doc.text("www.alternativaketo.com", 40, currentY + 2, { align: "center" });
 
           if (isReseller && ingredients.length > 0) {
             const recipeIngredients = selectedRecipe.ingredients.map(ri => {
@@ -316,8 +318,8 @@ const Calculator: React.FC<Props> = ({ userId }) => {
               currentY += 8;
               doc.setFontSize(9);
               doc.setFont("helvetica", "bold");
-              const ingLines = doc.splitTextToSize(ingText, 70);
-              doc.text(ingLines, 5, currentY);
+              const ingLines = doc.splitTextToSize(ingText, 78);
+              doc.text(ingLines, 1, currentY);
               currentY += (ingLines.length * 4);
             }
           }
@@ -325,20 +327,8 @@ const Calculator: React.FC<Props> = ({ userId }) => {
           // Ensure simple filename and open in new tab
           const cleanName = selectedRecipe.name.replace(/[^a-zA-Z0-9]/g, '_');
 
-          // Generate Blob URL
-          const pdfBlob = doc.output('blob');
-          const blobUrl = URL.createObjectURL(pdfBlob);
-
-          // Open in new tab (often more reliable than direct download on some configs)
-          const newWindow = window.open(blobUrl, '_blank');
-
-          // Fallback for popup blockers: also try to save
-          if (!newWindow) {
-            doc.save(`ticket_${cleanName}.pdf`);
-            alert("Se intentó abrir el PDF pero el navegador bloqueó la ventana emergente. Se ha descargado el archivo.");
-          }
-
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+          // Descargar directamente
+          doc.save(`ticket_${cleanName}.pdf`);
 
         } catch (innerErr: any) {
           console.error("Error drawing content:", innerErr);

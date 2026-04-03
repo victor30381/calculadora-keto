@@ -236,7 +236,7 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                     // Divider
                     doc.setLineWidth(0.5);
                     doc.setDrawColor(0);
-                    doc.line(5, headerY + 4, 75, headerY + 4);
+                    doc.line(1, headerY + 4, 79, headerY + 4);
 
                     // Client Info
                     const client = clients.find(c => c.id === selectedClientId);
@@ -250,7 +250,7 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                     // Client Name - Larger
                     doc.setFontSize(20); // Reduced from 22
                     doc.setFont("helvetica", "bold");
-                    doc.text(`Cliente: ${clientName}`, 5, clientY);
+                    doc.text(`Cliente: ${clientName}`, 1, clientY);
                     clientY += 10; // Increased spacing
 
                     // Extra Details - Phone/Address
@@ -258,35 +258,35 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                     doc.setFont("helvetica", "normal");
 
                     if (clientPhone) {
-                        doc.text(`Tel: ${clientPhone}`, 5, clientY);
+                        doc.text(`Tel: ${clientPhone}`, 1, clientY);
                         clientY += 8; // Increased spacing
                     }
                     if (clientAddress) {
                         // Handle long addresses
-                        const splitAddress = doc.splitTextToSize(`Dir: ${clientAddress}`, 70);
-                        doc.text(splitAddress, 5, clientY);
+                        const splitAddress = doc.splitTextToSize(`Dir: ${clientAddress}`, 78);
+                        doc.text(splitAddress, 1, clientY);
                         clientY += (splitAddress.length * 8); // Increased line height
                     }
 
                     // Delivery Date & Time
                     const timeStr = deliveryTime ? ` a las ${deliveryTime}hs` : '';
-                    doc.text(`Fecha Entrega: ${dateStr}${timeStr}`, 5, clientY);
+                    doc.text(`Fecha Entrega: ${dateStr}${timeStr}`, 1, clientY);
                     clientY += 8; // Increased spacing
 
                     doc.setLineWidth(0.5);
-                    doc.line(5, clientY + 2, 75, clientY + 2);
+                    doc.line(1, clientY + 2, 79, clientY + 2);
 
                     // Items Header
                     let currentY = clientY + 8; // Adapted spacing
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(10); // Reset for header
-                    doc.text("Cant.", 5, currentY);
-                    doc.text("Producto", 20, currentY);
-                    doc.text("Total", 75, currentY, { align: "right" });
+                    doc.text("Cant.", 1, currentY);
+                    doc.text("Producto", 14, currentY);
+                    doc.text("Total", 79, currentY, { align: "right" });
 
                     currentY += 2; // Spacing after header text
                     doc.setLineWidth(0.2);
-                    doc.line(5, currentY, 75, currentY); // Underline header
+                    doc.line(1, currentY, 79, currentY); // Underline header
                     currentY += 5; // Start items
 
                     doc.setFont("helvetica", "normal");
@@ -294,12 +294,12 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                     // Items List
                     items.forEach(item => {
                         const itemName = item.name || "Producto";
-                        // Wrap text if too long (max width approx 45mm)
-                        const splitTitle = doc.splitTextToSize(itemName, 45);
+                        // Wrap text if too long (max width approx 55mm)
+                        const splitTitle = doc.splitTextToSize(itemName, 55);
 
-                        doc.text(`${item.quantity}`, 5, currentY);
-                        doc.text(splitTitle, 20, currentY);
-                        doc.text(`$${item.price.toLocaleString()}`, 75, currentY, { align: "right" });
+                        doc.text(`${item.quantity}`, 1, currentY);
+                        doc.text(splitTitle, 14, currentY);
+                        doc.text(`$${item.price.toLocaleString()}`, 79, currentY, { align: "right" });
 
                         // Increase Y based on number of lines
                         currentY += (splitTitle.length * 5) + 3; // +3 for extra breathing room between items
@@ -308,7 +308,7 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                     // Totals Section
                     currentY += 2;
                     doc.setLineWidth(0.5);
-                    doc.line(5, currentY, 75, currentY);
+                    doc.line(1, currentY, 79, currentY);
                     currentY += 6;
 
                     // Helper for right-aligned totals
@@ -316,7 +316,7 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                         doc.setFont("helvetica", isBold ? "bold" : "normal");
                         doc.setFontSize(fontSize > 0 ? fontSize : (isBold ? 12 : 11));
                         doc.text(label, 45, currentY, { align: "right" });
-                        doc.text(value, 75, currentY, { align: "right" });
+                        doc.text(value, 79, currentY, { align: "right" });
                         currentY += (fontSize > 12 ? 10 : 6); // More space for larger fonts
                     };
 
@@ -327,7 +327,7 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
 
                         // Small separator for final balance
                         doc.setLineWidth(0.2);
-                        doc.line(40, currentY - 4, 75, currentY - 4);
+                        doc.line(40, currentY - 4, 79, currentY - 4);
                         currentY += 2;
 
                         // Resta - Larger
@@ -359,21 +359,13 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                     doc.setFontSize(10);
                     doc.text("@alternativaketo", startX + iconSize + 2, iconY + 5);
                     
-                    doc.setFont("helvetica", "normal");
-                    doc.setFontSize(9);
-                    doc.text("www.alternativaketo.com", 40, iconY + 12, { align: "center" });
+                    doc.setFont("helvetica", "bold"); // Made bold
+                    doc.setFontSize(11); // Increased from 9
+                    doc.text("www.alternativaketo.com", 40, iconY + 14, { align: "center" });
 
-                    // Output: Open in New Tab
-                    const pdfBlob = doc.output('blob');
-                    const blobUrl = URL.createObjectURL(pdfBlob);
-                    const newWindow = window.open(blobUrl, '_blank');
-
-                    if (!newWindow) {
-                        const clientSafe = clientName.replace(/[^a-zA-Z0-9]/g, '_');
-                        doc.save(`ticket_${clientSafe}.pdf`);
-                        alert("Ventana emergente bloqueada. Se descargó el archivo.");
-                    }
-                    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+                    // Descargar directamente
+                    const clientSafe = clientName.replace(/[^a-zA-Z0-9]/g, '_');
+                    doc.save(`ticket_${clientSafe}.pdf`);
 
                 } catch (innerErr: any) {
                     console.error("Error drawing ticket:", innerErr);

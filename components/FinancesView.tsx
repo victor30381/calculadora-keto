@@ -299,15 +299,8 @@ const FinancesView: React.FC<FinancesViewProps> = ({ userId }) => {
             currentY += 5; // space between periods
         });
 
-        // Open in new tab/save fallback
-        const pdfBlob = doc.output('blob');
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const newWindow = window.open(blobUrl, '_blank');
-        if (!newWindow) {
-            doc.save(`reporte_financiero_${timeframe}.pdf`);
-            alert("El navegador bloqueó la ventana emergente. El archivo se ha descargado.");
-        }
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        // Descargar directamente
+        doc.save(`reporte_financiero_${timeframe}.pdf`);
     };
 
     if (loading) return <div className="p-8 text-center text-brand-brown font-serif italic">Cargando datos financieros...</div>;
