@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { Client, OrderItem, Order, Recipe } from '../types';
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import jsPDF from 'jspdf';
 
 interface NewOrderViewProps {
@@ -30,6 +31,46 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
     const [newClientPhone, setNewClientPhone] = useState('');
     const [newClientAddress, setNewClientAddress] = useState('');
     const [isCreatingClient, setIsCreatingClient] = useState(false);
+
+    // Map State for Quick Client Add
+    const googleMapsApiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+    const { isLoaded } = useJsApiLoader({ id: 'google-maps-script', googleMapsApiKey, libraries: ['places'] as any });
+    const [mapCenter, setMapCenter] = useState({ lat: -34.6037, lng: -58.3816 });
+    const [markerPos, setMarkerPos] = useState<{lat: number, lng: number} | null>(null);
+    const [debouncedNewClientAddress, setDebouncedNewClientAddress] = useState('');
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedNewClientAddress(newClientAddress);
+        }, 800);
+        return () => clearTimeout(handler);
+    }, [newClientAddress]);
+
+    useEffect(() => {
+        if (!isLoaded || !debouncedNewClientAddress || debouncedNewClientAddress.length < 5) return;
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ address: debouncedNewClientAddress + (debouncedNewClientAddress.toLowerCase().includes('argentina') ? '' : ', Argentina') }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+                const loc = results[0].geometry.location;
+                setMapCenter({ lat: loc.lat(), lng: loc.lng() });
+                setMarkerPos({ lat: loc.lat(), lng: loc.lng() });
+            }
+        });
+    }, [debouncedNewClientAddress, isLoaded]);
+
+    const onMapClick = (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng || !isLoaded) return;
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        setMarkerPos({ lat, lng });
+
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+                setNewClientAddress(results[0].formatted_address);
+            }
+        });
+    };
 
     // Order State
     const [items, setItems] = useState<LocalOrderItem[]>([
@@ -481,7 +522,7 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
             {/* Quick Add Client Modal */}
             {showClientModal && (
                 <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in duration-200">
                         <h3 className="text-xl font-bold text-brand-brown mb-4 font-serif">Nuevo Cliente Rápido</h3>
                         <form onSubmit={handleCreateClient} className="space-y-4">
                             <div>
@@ -494,7 +535,32 @@ const NewOrderView: React.FC<NewOrderViewProps> = ({ userId, onBack, initialOrde
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-brand-brown mb-1">Dirección</label>
-                                <input type="text" value={newClientAddress} onChange={(e) => setNewClientAddress(e.target.value)} className="w-full p-2.5 rounded-lg border border-brand-brown/20" />
+                                <input type="text" value={newClientAddress} onChange={(e) => setNewClientAddress(e.target.value)} className="w-full p-2.5 rounded-lg border border-brand-brown/20" placeholder="Ej: Calle 123 (o clic en el mapa)" />
+                                {isLoaded && (
+                                    <div className="mt-3 rounded-lg overflow-hidden border border-brand-brown/20 h-48 w-full relative">
+                                        <div className="absolute top-1 left-1 z-10 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold text-brand-brown/80 shadow-sm pointer-events-none">
+                                            👇 Clic para marcar ubicación
+                                        </div>
+                                        <GoogleMap
+                                            mapContainerStyle={{ width: '100%', height: '100%' }}
+                                            center={mapCenter}
+                                            zoom={14}
+                                            onClick={onMapClick}
+                                            options={{
+                                                disableDefaultUI: true,
+                                                styles: [
+                                                    { elementType: 'geometry', stylers: [{ color: '#f5f0eb' }] },
+                                                    { elementType: 'labels.text.fill', stylers: [{ color: '#5D3A29' }] },
+                                                    { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f0eb' }] },
+                                                    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#e8ddd3' }] },
+                                                    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9d6df' }] },
+                                                ]
+                                            }}
+                                        >
+                                            {markerPos && <Marker position={markerPos} />}
+                                        </GoogleMap>
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-2 pt-2">
                                 <button type="button" onClick={() => setShowClientModal(false)} className="flex-1 py-2 rounded-lg border border-brand-brown/20 text-brand-brown font-bold hover:bg-brand-brown/5">Cancelar</button>

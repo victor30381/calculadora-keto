@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { Client } from '../types';
 
 interface ClientsViewProps {
@@ -19,8 +20,18 @@ const ClientsView: React.FC<ClientsViewProps> = ({ userId, onBack }) => {
     const [debouncedAddress, setDebouncedAddress] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+    const [mapCenter, setMapCenter] = useState({ lat: -34.6037, lng: -58.3816 });
+    const [markerPos, setMarkerPos] = useState<{lat: number, lng: number} | null>(null);
+
+    const googleMapsApiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+
+    const { isLoaded } = useJsApiLoader({
+        id: 'google-maps-script',
+        googleMapsApiKey,
+        libraries: ['places'] as any,
+    });
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -28,6 +39,35 @@ const ClientsView: React.FC<ClientsViewProps> = ({ userId, onBack }) => {
         }, 800);
         return () => clearTimeout(handler);
     }, [address]);
+
+    useEffect(() => {
+        if (!isLoaded || !debouncedAddress || debouncedAddress.length < 5) return;
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode(
+            { address: debouncedAddress + (debouncedAddress.toLowerCase().includes('argentina') ? '' : ', Argentina') },
+            (results, status) => {
+                if (status === 'OK' && results && results[0]) {
+                    const loc = results[0].geometry.location;
+                    setMapCenter({ lat: loc.lat(), lng: loc.lng() });
+                    setMarkerPos({ lat: loc.lat(), lng: loc.lng() });
+                }
+            }
+        );
+    }, [debouncedAddress, isLoaded]);
+
+    const onMapClick = (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng || !isLoaded) return;
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        setMarkerPos({ lat, lng });
+
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+                setAddress(results[0].formatted_address);
+            }
+        });
+    };
 
     useEffect(() => {
         if (!userId) return;
@@ -164,20 +204,39 @@ const ClientsView: React.FC<ClientsViewProps> = ({ userId, onBack }) => {
                                     value={address}
                                     onChange={(e) => setAddress(e.target.value)}
                                     className="w-full p-3 rounded-xl border border-brand-brown/20 focus:ring-2 focus:ring-brand-accent/50 outline-none bg-brand-cream/30"
-                                    placeholder="Calle 123, Ciudad"
+                                    placeholder="Calle 123, Ciudad (o hacé clic en el mapa)"
                                 />
-                                {debouncedAddress.length > 5 && (
-                                    <div className="mt-3 rounded-xl overflow-hidden border border-brand-brown/20 h-48 w-full shadow-inner relative animate-fade-in">
-                                        <iframe
-                                            width="100%"
-                                            height="100%"
-                                            style={{ border: 0 }}
-                                            loading="lazy"
-                                            allowFullScreen
-                                            src={`https://maps.google.com/maps?q=${encodeURIComponent(debouncedAddress + (debouncedAddress.toLowerCase().includes('argentina') ? '' : ', Argentina'))}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                                        ></iframe>
+                                {isLoaded ? (
+                                    <div className="mt-3 rounded-xl overflow-hidden border border-brand-brown/20 h-64 w-full shadow-inner relative animate-fade-in group">
+                                        <div className="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-bold text-brand-brown shadow-sm border border-brand-brown/10 pointer-events-none transition-opacity group-hover:opacity-100 opacity-70">
+                                            👇 Hacé clic en el mapa para marcar la ubicación
+                                        </div>
+                                        <GoogleMap
+                                            mapContainerStyle={{ width: '100%', height: '100%' }}
+                                            center={mapCenter}
+                                            zoom={15}
+                                            onClick={onMapClick}
+                                            options={{
+                                                disableDefaultUI: true,
+                                                zoomControl: true,
+                                                styles: [
+                                                    { elementType: 'geometry', stylers: [{ color: '#f5f0eb' }] },
+                                                    { elementType: 'labels.text.fill', stylers: [{ color: '#5D3A29' }] },
+                                                    { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f0eb' }] },
+                                                    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#e8ddd3' }] },
+                                                    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#d4c5b5' }] },
+                                                    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9d6df' }] },
+                                                ]
+                                            }}
+                                        >
+                                            {markerPos && <Marker position={markerPos} />}
+                                        </GoogleMap>
                                     </div>
-                                )}
+                                ) : debouncedAddress.length > 5 ? (
+                                    <div className="mt-3 rounded-xl overflow-hidden border border-brand-brown/20 h-48 w-full shadow-inner relative animate-fade-in flex items-center justify-center bg-brand-cream/30 text-brand-brown/50">
+                                        Cargando mapa...
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div className="pt-2 flex gap-3">
@@ -202,6 +261,21 @@ const ClientsView: React.FC<ClientsViewProps> = ({ userId, onBack }) => {
                     </div>
                 ) : (
                     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4">
+                        {clients.length > 0 && (
+                            <div className="relative mb-4">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Buscar cliente por nombre..."
+                                    className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-brand-brown/20 focus:ring-2 focus:ring-brand-accent/50 outline-none bg-white shadow-sm transition-shadow text-brand-brown"
+                                />
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-brand-brown/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                        )}
+                        
                         {clients.length === 0 ? (
                             <div className="text-center py-12 opacity-50">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-brand-brown" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -210,8 +284,15 @@ const ClientsView: React.FC<ClientsViewProps> = ({ userId, onBack }) => {
                                 <p className="font-serif text-lg text-brand-brown">No hay clientes aún</p>
                                 <button onClick={() => setActiveTab('form')} className="text-brand-accent underline mt-2">Agregar el primero</button>
                             </div>
+                        ) : clients.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
+                            <div className="text-center py-12 opacity-50">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-brand-brown/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <p className="font-serif text-lg text-brand-brown">No se encontraron clientes</p>
+                            </div>
                         ) : (
-                            clients.map(client => (
+                            clients.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map(client => (
                                 <div key={client.id} className="bg-white p-4 rounded-xl shadow-sm border border-brand-brown/10 hover:border-brand-brown/30 transition-all group flex justify-between items-center">
                                     <div className="flex-1 min-w-0 mr-4">
                                         <h4 className="font-bold text-brand-brown truncate">{client.name}</h4>

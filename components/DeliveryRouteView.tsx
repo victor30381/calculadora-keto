@@ -379,6 +379,34 @@ const DeliveryRouteView: React.FC<DeliveryRouteViewProps> = ({ userId }) => {
         localStorage.setItem('ak_end_address', value);
     };
 
+    const handleUseMyLocation = (setFieldValue: (val: string) => void) => {
+        if (!mapsLoaded || !(window as any).google?.maps) {
+            alert("El mapa aún está cargando. Intentá de nuevo en unos segundos.");
+            return;
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const geocoder = new google.maps.Geocoder();
+                    geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+                        if (status === 'OK' && results && results[0]) {
+                            setFieldValue(results[0].formatted_address);
+                        } else {
+                            setFieldValue(`${latitude}, ${longitude}`);
+                        }
+                    });
+                },
+                (error) => {
+                    alert("No se pudo obtener tu ubicación: " + error.message);
+                }
+            );
+        } else {
+            alert("Tu navegador no soporta geolocalización.");
+        }
+    };
+
     // Draw route on map
     const drawRoute = useCallback((orderedStops: DeliveryStop[]) => {
         if (!mapsLoaded || !mapInstanceRef.current || !directionsRendererRef.current) return;
@@ -591,13 +619,28 @@ const DeliveryRouteView: React.FC<DeliveryRouteViewProps> = ({ userId }) => {
 
     // Open Google Maps navigation
     const handleNavigate = () => {
-        if (stops.length === 0) return;
+        if (stops.length === 0) {
+            alert('No hay paradas seleccionadas para navegar.');
+            return;
+        }
 
-        const origin = encodeURIComponent(originAddress || stops[0].address);
-        const dest = encodeURIComponent(endAddress || originAddress || stops[stops.length - 1].address);
-        const waypoints = stops.map(s => encodeURIComponent(s.address)).join('|');
+        if (!originAddress.trim()) {
+            alert('Configurá un punto de partida antes de navegar (tocá el ⚙️).');
+            setShowConfigPanel(true);
+            return;
+        }
 
-        const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&waypoints=${waypoints}&travelmode=driving`;
+        // Only use addresses from selected stops as waypoints — never invent origins or destinations
+        const origin = encodeURIComponent(originAddress);
+        // Destination: return to origin if endAddress not explicitly set
+        const dest = endAddress.trim() ? encodeURIComponent(endAddress) : encodeURIComponent(originAddress);
+        // Waypoints: ONLY addresses from the actual selected stops
+        const waypoints = stops
+            .filter(s => s.address.trim() !== '')
+            .map(s => encodeURIComponent(s.address))
+            .join('|');
+
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=driving`;
         window.open(url, '_blank');
     };
 
@@ -700,12 +743,20 @@ const DeliveryRouteView: React.FC<DeliveryRouteViewProps> = ({ userId }) => {
                                 className="w-full p-3 rounded-xl border border-brand-brown/20 focus:ring-2 focus:ring-brand-accent/50 outline-none bg-white text-brand-brown shadow-sm"
                                 placeholder="Ej: Av. Corrientes 1234, CABA"
                             />
-                            <button
-                                onClick={() => saveOrigin('Alternativa Keto')}
-                                className="mt-2 text-[11px] font-bold text-brand-brown bg-brand-brown/10 hover:bg-brand-brown/20 px-3 py-1.5 rounded-lg ml-1 transition-colors"
-                            >
-                                📍 Usar Alternativa Keto
-                            </button>
+                            <div className="flex items-center gap-2 mt-2">
+                                <button
+                                    onClick={() => saveOrigin('Alternativa Keto')}
+                                    className="text-[11px] font-bold text-brand-brown bg-brand-brown/10 hover:bg-brand-brown/20 px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                    📍 Usar Alternativa Keto
+                                </button>
+                                <button
+                                    onClick={() => handleUseMyLocation(saveOrigin)}
+                                    className="text-[11px] font-bold text-brand-brown bg-brand-brown/10 hover:bg-brand-brown/20 px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                    📍 Mi Ubicación
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-brand-brown/60 mb-1.5 uppercase tracking-wider">
@@ -719,14 +770,20 @@ const DeliveryRouteView: React.FC<DeliveryRouteViewProps> = ({ userId }) => {
                                 className="w-full p-3 rounded-xl border border-brand-brown/20 focus:ring-2 focus:ring-brand-accent/50 outline-none bg-white text-brand-brown shadow-sm"
                                 placeholder="Igual que el origen si dejás vacío"
                             />
-                            <div className="flex items-center gap-3 mt-2">
+                            <div className="flex items-center gap-2 mt-2">
                                 <button
                                     onClick={() => saveEnd('Alternativa Keto')}
-                                    className="text-[11px] font-bold text-brand-brown bg-brand-brown/10 hover:bg-brand-brown/20 px-3 py-1.5 rounded-lg ml-1 transition-colors"
+                                    className="text-[11px] font-bold text-brand-brown bg-brand-brown/10 hover:bg-brand-brown/20 px-3 py-1.5 rounded-lg transition-colors"
                                 >
                                     🏁 Usar Alternativa Keto
                                 </button>
-                                <p className="text-[10px] text-brand-brown/40">Vacío = Partida</p>
+                                <button
+                                    onClick={() => handleUseMyLocation(saveEnd)}
+                                    className="text-[11px] font-bold text-brand-brown bg-brand-brown/10 hover:bg-brand-brown/20 px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                    🏁 Mi Ubicación
+                                </button>
+                                <p className="text-[10px] text-brand-brown/40 ml-1">Vacío = Partida</p>
                             </div>
                         </div>
                     </div>
