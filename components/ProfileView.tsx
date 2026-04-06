@@ -1,10 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useTheme, defaultTheme } from './ThemeContext';
 import { ThemeColors, UserProfile } from '../types';
+
+const MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+
+const loadGoogleMaps = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        if ((window as any).google?.maps) { resolve(); return; }
+        if (!MAPS_API_KEY || MAPS_API_KEY === 'TU_API_KEY_AQUI') { reject(new Error('API_KEY_MISSING')); return; }
+        const existingScript = document.getElementById('google-maps-script');
+        if (existingScript) { existingScript.addEventListener('load', () => resolve()); return; }
+        const script = document.createElement('script');
+        script.id = 'google-maps-script';
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&libraries=places,geometry`;
+        script.async = true; script.defer = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('MAPS_LOAD_FAILED'));
+        document.head.appendChild(script);
+    });
+};
+
 
 interface ProfileViewProps {
   user: User | null;
@@ -21,6 +40,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
     facebook: '',
     website: '',
     whatsappPhone: '',
+    companyAddress: '',
     themeColors: defaultTheme,
   });
 
@@ -29,6 +49,87 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
   const [loadingInitial, setLoadingInitial] = useState(true);
+  
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+
+  useEffect(() => {
+    loadGoogleMaps().then(() => setMapsLoaded(true)).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!mapsLoaded || loadingInitial || !mapRef.current) return;
+    if (mapInstanceRef.current) return; // Already initialized
+
+    const initialPos = profileData.companyLat && profileData.companyLng 
+      ? { lat: profileData.companyLat, lng: profileData.companyLng } 
+      : { lat: -34.6037, lng: -58.3816 };
+
+    const map = new google.maps.Map(mapRef.current, {
+        center: initialPos,
+        zoom: (profileData.companyLat && profileData.companyLng) ? 15 : 10,
+        disableDefaultUI: false,
+    });
+    mapInstanceRef.current = map;
+
+    const marker = new google.maps.Marker({
+        position: initialPos,
+        map: map,
+        draggable: true,
+        title: "Ubicación de la Empresa",
+        icon: {
+            url: '/logo.png',
+            scaledSize: new google.maps.Size(46, 46),
+            origin: new google.maps.Point(0,0),
+            anchor: new google.maps.Point(23,23),
+        },
+        zIndex: 999
+    });
+    markerRef.current = marker;
+
+    marker.addListener('dragend', () => {
+        const pos = marker.getPosition();
+        if (pos) {
+            setProfileData(prev => ({
+                ...prev,
+                companyLat: pos.lat(),
+                companyLng: pos.lng()
+            }));
+        }
+    });
+    
+    map.addListener('click', (e: any) => {
+        const pos = e.latLng;
+        marker.setPosition(pos);
+        setProfileData(prev => ({
+             ...prev,
+             companyLat: pos.lat(),
+             companyLng: pos.lng()
+        }));
+    });
+  }, [mapsLoaded, loadingInitial, profileData.companyLat, profileData.companyLng]);
+
+  const handleLocateAddress = () => {
+      if (!mapsLoaded || !mapInstanceRef.current || !profileData.companyAddress) return;
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: profileData.companyAddress, componentRestrictions: { country: 'AR' } }, (results, status) => {
+          if (status === 'OK' && results && results[0]) {
+              const location = results[0].geometry.location;
+              mapInstanceRef.current!.setCenter(location);
+              mapInstanceRef.current!.setZoom(16);
+              markerRef.current?.setPosition(location);
+              setProfileData(prev => ({
+                  ...prev,
+                  companyLat: location.lat(),
+                  companyLng: location.lng()
+              }));
+          } else {
+              alert('No se pudo ubicar la dirección. Por favor, intentá arrastrando el marcador manualmente en el mapa.');
+          }
+      });
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -299,6 +400,42 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
                     placeholder="https://www.tuweb.com"
                   />
                 </div>
+              </div>
+              <div className="pt-2">
+                <label className="block text-sm font-bold text-brand-brown mb-1.5">Domicilio de la Empresa</label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-4 top-4 text-brand-brown/40 font-bold">📍</span>
+                    <input
+                      type="text"
+                      name="companyAddress"
+                      value={profileData.companyAddress || ''}
+                      onChange={handleInputChange}
+                      className="w-full p-4 pl-12 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 text-brand-brown bg-brand-cream placeholder-stone-400 transition-all font-medium"
+                      placeholder="Ej: Av. Corrientes 1234, CABA"
+                    />
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={handleLocateAddress}
+                    className="px-4 py-4 bg-brand-brown text-white font-bold rounded-xl shadow-md hover:bg-[#5D4229] transition-colors whitespace-nowrap"
+                  >
+                    Buscar en Mapa
+                  </button>
+                </div>
+                
+                {/* Map container */}
+                <div className="mt-4 rounded-xl overflow-hidden shadow-sm border border-stone-200 relative h-64 w-full">
+                  {!mapsLoaded && (
+                     <div className="absolute inset-0 flex items-center justify-center bg-stone-50">
+                        <span className="text-sm font-medium text-stone-500">Cargando mapa...</span>
+                     </div>
+                  )}
+                  <div ref={mapRef} className="w-full h-full" />
+                </div>
+                <p className="text-xs text-stone-500 mt-2">
+                  Podes arrastrar el marcador con tu logo directamente al punto exacto para guardar tu ubicación precisa.
+                </p>
               </div>
             </div>
           </div>

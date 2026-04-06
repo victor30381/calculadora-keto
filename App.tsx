@@ -12,6 +12,7 @@ import { ThemeProvider } from './components/ThemeContext';
 import ProfileView from './components/ProfileView';
 import CatalogPage from './components/CatalogPage';
 import CatalogManager from './components/CatalogManager';
+import DeliveryRouteView from './components/DeliveryRouteView';
 function App() {
   // Check if this is a catalog route
   const [catalogUserId, setCatalogUserId] = useState<string | null>(null);
@@ -198,6 +199,7 @@ function App() {
       >
         {activeTab === 'dashboard' && <Dashboard userId={user?.uid || ''} onEditOrder={handleEditOrder} onViewOrder={handleViewOrder} onNewOrderWithDate={handleNewOrderWithDate} />}
         {activeTab === 'finances' && <FinancesView userId={user?.uid || ''} />}
+        {activeTab === 'shipments' && <DeliveryRouteView userId={user.uid} />}
         {activeTab === 'profile' && <ProfileView user={user} />}
         {activeTab === 'catalogManager' && <CatalogManager userId={user.uid} user={user} />}
         {/* Helper logic to keep other tabs valid if needed, though mostly using modals now */}

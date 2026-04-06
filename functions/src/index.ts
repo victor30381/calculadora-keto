@@ -124,3 +124,74 @@ Devuelve SOLO el texto.`;
     }
   }
 );
+
+export const optimizeDeliveryRoute = onCall(
+  { secrets: [geminiApiKey], cors: true },
+  async (request) => {
+    const { origin, destination, stops } = request.data;
+
+    if (!stops || !Array.isArray(stops) || stops.length < 2) {
+      throw new HttpsError("invalid-argument", "Se necesitan al menos 2 paradas para optimizar.");
+    }
+
+    if (!origin) {
+      throw new HttpsError("invalid-argument", "Falta la dirección de origen.");
+    }
+
+    try {
+      const genAI = new GoogleGenerativeAI(geminiApiKey.value());
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+      const stopsDescription = stops.map((s: any, i: number) => 
+        `  Parada ${i + 1}: "${s.clientName}" en "${s.address}" (orderId: "${s.orderId}")`
+      ).join("\n");
+
+      const prompt = `Eres un experto en logística de entregas y optimización de rutas en Argentina.
+
+Necesito que optimices el orden de las siguientes paradas de entrega para minimizar la distancia total recorrida y el tiempo de viaje.
+
+PUNTO DE PARTIDA: "${origin}"
+PUNTO FINAL: "${destination || origin}"
+
+PARADAS A ORDENAR:
+${stopsDescription}
+
+INSTRUCCIONES:
+1. Analiza las direcciones geográficamente
+2. Determina el orden más eficiente considerando proximidad geográfica
+3. Considera que las direcciones están en Argentina (probablemente Buenos Aires y alrededores)
+4. Agrupa paradas que estén en la misma zona
+
+Devuelve tu respuesta ÚNICAMENTE en este formato JSON exacto, sin texto adicional ni bloques de código markdown:
+{
+  "optimizedOrder": [
+    { "orderId": "id_del_pedido", "clientName": "nombre", "address": "dirección" }
+  ],
+  "reasoning": "Explicación breve en español de por qué este orden es óptimo (máximo 2 oraciones)"
+}
+
+El array "optimizedOrder" debe contener TODAS las paradas en el nuevo orden optimizado. Usa los mismos orderId que te di.`;
+
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+        }
+      });
+
+      const responseText = result.response.text();
+      logger.info("Gemini route optimization response:", responseText);
+
+      const parsed = JSON.parse(responseText);
+
+      return {
+        optimizedOrder: parsed.optimizedOrder || [],
+        reasoning: parsed.reasoning || "Ruta optimizada.",
+      };
+
+    } catch (error) {
+      logger.error("Error al optimizar ruta con Gemini", error);
+      throw new HttpsError("internal", "No se pudo optimizar la ruta de entrega.");
+    }
+  }
+);

@@ -19,9 +19,12 @@ interface ThemeContextType {
   setThemeLocal: (theme: ThemeColors) => void;
   profileName: string;
   logoUrl: string | null;
+  companyAddress: string;
+  companyLat?: number;
+  companyLng?: number;
 }
 
-const ThemeContext = createContext<ThemeContextType>({ theme: defaultTheme, setThemeLocal: () => {}, profileName: '', logoUrl: null });
+const ThemeContext = createContext<ThemeContextType>({ theme: defaultTheme, setThemeLocal: () => {}, profileName: '', logoUrl: null, companyAddress: '' });
 
 export const useTheme = () => useContext(ThemeContext);
 
@@ -29,12 +32,16 @@ export const ThemeProvider: React.FC<{ userId?: string, children: React.ReactNod
   const [theme, setTheme] = useState<ThemeColors>(defaultTheme);
   const [profileName, setProfileName] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [companyLat, setCompanyLat] = useState<number | undefined>(undefined);
+  const [companyLng, setCompanyLng] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (!userId) {
       setTheme(defaultTheme);
       setProfileName('');
       setLogoUrl(null);
+      setCompanyAddress('');
       return;
     }
 
@@ -43,6 +50,8 @@ export const ThemeProvider: React.FC<{ userId?: string, children: React.ReactNod
     const unsubscribe = firestoreOnSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        setCompanyLat(data.companyLat);
+        setCompanyLng(data.companyLng);
         if (data.themeColors) {
           setTheme({ ...defaultTheme, ...data.themeColors });
         } else {
@@ -63,10 +72,16 @@ export const ThemeProvider: React.FC<{ userId?: string, children: React.ReactNod
           setLogoUrl(null);
           updateFavicon(null); // Or default reset if you prefer
         }
+        if (data.companyAddress) {
+          setCompanyAddress(data.companyAddress);
+        } else {
+          setCompanyAddress('');
+        }
       } else {
         setTheme(defaultTheme);
         setProfileName('');
         setLogoUrl(null);
+        setCompanyAddress('');
         updateFavicon(null);
       }
     }, (error) => {
@@ -109,7 +124,7 @@ export const ThemeProvider: React.FC<{ userId?: string, children: React.ReactNod
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setThemeLocal, profileName, logoUrl }}>
+    <ThemeContext.Provider value={{ theme, setThemeLocal, profileName, logoUrl, companyAddress, companyLat, companyLng }}>
       {children}
     </ThemeContext.Provider>
   );

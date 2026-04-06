@@ -16,8 +16,18 @@ const ClientsView: React.FC<ClientsViewProps> = ({ userId, onBack }) => {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
+    const [debouncedAddress, setDebouncedAddress] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedAddress(address);
+        }, 800);
+        return () => clearTimeout(handler);
+    }, [address]);
 
     useEffect(() => {
         if (!userId) return;
@@ -156,6 +166,18 @@ const ClientsView: React.FC<ClientsViewProps> = ({ userId, onBack }) => {
                                     className="w-full p-3 rounded-xl border border-brand-brown/20 focus:ring-2 focus:ring-brand-accent/50 outline-none bg-brand-cream/30"
                                     placeholder="Calle 123, Ciudad"
                                 />
+                                {debouncedAddress.length > 5 && (
+                                    <div className="mt-3 rounded-xl overflow-hidden border border-brand-brown/20 h-48 w-full shadow-inner relative animate-fade-in">
+                                        <iframe
+                                            width="100%"
+                                            height="100%"
+                                            style={{ border: 0 }}
+                                            loading="lazy"
+                                            allowFullScreen
+                                            src={`https://maps.google.com/maps?q=${encodeURIComponent(debouncedAddress + (debouncedAddress.toLowerCase().includes('argentina') ? '' : ', Argentina'))}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                                        ></iframe>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="pt-2 flex gap-3">

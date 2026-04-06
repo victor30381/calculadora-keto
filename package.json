@@ -12,12 +12,14 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@react-google-maps/api": "^2.20.8",
     "firebase": "^12.6.0",
     "jspdf": "^3.0.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1"
   },
   "devDependencies": {
+    "@types/google.maps": "^3.58.1",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "gh-pages": "^6.3.0",

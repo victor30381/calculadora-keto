@@ -179,4 +179,7 @@ export interface UserProfile {
   themeColors?: ThemeColors;
   logoUrl?: string;
   catalogSections?: string[];
+  companyAddress?: string; // Base address for routing and UI defaults
+  companyLat?: number;
+  companyLng?: number;
 }
