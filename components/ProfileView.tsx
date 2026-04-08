@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, storage, functions } from '../firebase';
 import { useTheme, defaultTheme } from './ThemeContext';
 import { ThemeColors, UserProfile } from '../types';
 
@@ -49,6 +50,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
   const [loadingInitial, setLoadingInitial] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testMessage, setTestMessage] = useState({ type: '', text: '' });
   
   const [mapsLoaded, setMapsLoaded] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -437,6 +440,108 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
                   Podes arrastrar el marcador con tu logo directamente al punto exacto para guardar tu ubicación precisa.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Telegram Notifications Section */}
+          <div className="bg-gradient-to-r from-sky-50 to-sky-100/50 p-5 md:p-6 rounded-2xl border border-sky-200/60">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center shadow-md flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-brand-brown text-lg leading-tight">Notificaciones por Telegram</h3>
+                <p className="text-sm text-brand-brown/60">Recibí una alerta instantánea en tu celular cada vez que entre un pedido nuevo.</p>
+              </div>
+            </div>
+
+            {/* Instrucciones paso a paso */}
+            <div className="bg-white/60 rounded-xl p-4 mb-4 border border-sky-100">
+              <p className="text-sm font-bold text-brand-brown mb-3">📋 Configuración en 3 pasos:</p>
+              <div className="space-y-2.5">
+                <div className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                  <p className="text-sm text-brand-brown/80">Abrí Telegram y buscá al bot <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-sky-600 underline hover:text-sky-800 font-bold">@userinfobot</a>. Enviále cualquier mensaje y te responde con tu <strong>Chat ID</strong> numérico.</p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                  <p className="text-sm text-brand-brown/80">Buscá al bot <a href="https://t.me/Alternativa_keto_bot" target="_blank" rel="noopener noreferrer" className="text-sky-600 underline hover:text-sky-800 font-bold">@Alternativa_keto_bot</a> en Telegram y hacé click en <strong>"Iniciar"</strong> (o enviále <code className="bg-sky-100 px-1.5 py-0.5 rounded text-xs">/start</code>). Esto permite que el bot te pueda escribir.</p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+                  <p className="text-sm text-brand-brown/80">Pegá tu Chat ID acá abajo, guardá los cambios, y probá con el botón <strong>"Enviar notificación de prueba"</strong>.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <label className="block text-sm font-bold text-brand-brown mb-1.5">Tu Chat ID de Telegram</label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-4 text-sky-500 font-bold text-sm">🤖</span>
+                  <input
+                    type="text"
+                    name="telegramChatId"
+                    value={profileData.telegramChatId || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-4 pl-12 rounded-xl border border-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-400/50 text-brand-brown bg-white placeholder-stone-400 transition-all font-medium"
+                    placeholder="Ej: 123456789"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={!profileData.telegramChatId || isTesting}
+                  onClick={async () => {
+                    if (!profileData.telegramChatId) return;
+                    setIsTesting(true);
+                    setTestMessage({ type: '', text: '' });
+                    try {
+                      // Primero guardar el Chat ID en Firestore
+                      if (user) {
+                        await setDoc(doc(db, 'userProfiles', user.uid), { telegramChatId: profileData.telegramChatId }, { merge: true });
+                      }
+                      const testFn = httpsCallable(functions, 'testTelegramNotification');
+                      await testFn({ chatId: profileData.telegramChatId });
+                      setTestMessage({ type: 'success', text: '✅ ¡Notificación enviada! Revisá tu Telegram.' });
+                    } catch (err: any) {
+                      console.error('Telegram test error:', err);
+                      const errorMsg = err?.message || 'Error desconocido';
+                      if (errorMsg.includes('chat not found') || errorMsg.includes('bot was blocked')) {
+                        setTestMessage({ type: 'error', text: '⚠️ No se pudo enviar. Asegurate de haber iniciado una conversación con el bot (@Alternativa_keto_bot) en Telegram primero.' });
+                      } else {
+                        setTestMessage({ type: 'error', text: `❌ Error: ${errorMsg}` });
+                      }
+                    } finally {
+                      setIsTesting(false);
+                      setTimeout(() => setTestMessage({ type: '', text: '' }), 8000);
+                    }
+                  }}
+                  className="px-5 py-4 bg-gradient-to-r from-sky-500 to-sky-600 text-white font-bold rounded-xl shadow-md hover:from-sky-600 hover:to-sky-700 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
+                >
+                  {isTesting ? (
+                    <>
+                      <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                      </svg>
+                      Enviar prueba
+                    </>
+                  )}
+                </button>
+              </div>
+              {testMessage.text && (
+                <div className={`mt-3 p-3 rounded-xl text-sm font-semibold animate-fade-in ${
+                  testMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  {testMessage.text}
+                </div>
+              )}
             </div>
           </div>
 

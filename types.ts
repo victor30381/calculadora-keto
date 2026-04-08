@@ -182,4 +182,5 @@ export interface UserProfile {
   companyAddress?: string; // Base address for routing and UI defaults
   companyLat?: number;
   companyLng?: number;
+  telegramChatId?: string; // For order notifications via Telegram bot
 }

@@ -15,6 +15,7 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
   const [price, setPrice] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'ingredients'), where('userId', '==', userId));
@@ -187,12 +188,42 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
 
       <div className="space-y-3">
         <h3 className="text-lg font-bold text-brand-brown pl-1 font-serif">Inventario ({ingredients.length})</h3>
+        {/* Search Field */}
+        {ingredients.length > 0 && (
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-brown/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-brand-brown/15 focus:outline-none focus:ring-2 focus:ring-brand-accent/40 text-brand-brown bg-brand-beige/30 placeholder-brand-brown/35 text-sm transition-all"
+              placeholder="Buscar ingrediente..."
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-brand-brown/40 hover:text-brand-brown transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
         {ingredients.length === 0 ? (
           <p className="text-brand-brown/40 text-center py-8 italic">
             {error ? 'No se pudieron cargar datos.' : 'No hay ingredientes registrados.'}
           </p>
         ) : (
-          ingredients.map(ing => (
+          ingredients.filter(ing => ing.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && searchTerm ? (
+            <p className="text-brand-brown/40 text-center py-6 italic text-sm">No se encontraron resultados para "{searchTerm}"</p>
+          ) : (
+          ingredients.filter(ing => ing.name.toLowerCase().includes(searchTerm.toLowerCase())).map(ing => (
             <div key={ing.id} className="bg-white p-4 rounded-xl shadow-sm border border-brand-brown/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 hover:border-brand-brown/30 transition-colors">
               <div className="flex-1 pr-2">
                 <h4 className="font-bold text-brand-brown break-words">{ing.name}</h4>
@@ -226,7 +257,7 @@ const Ingredients: React.FC<Props> = ({ userId }) => {
               </div>
             </div>
           ))
-        )}
+        ))}
       </div>
     </div>
   );

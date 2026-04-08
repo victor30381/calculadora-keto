@@ -55,6 +55,7 @@ const Recipes: React.FC<Props> = ({ userId }) => {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isGeneratingNutrition, setIsGeneratingNutrition] = useState(false);
+  const [recipeSearchTerm, setRecipeSearchTerm] = useState('');
 
   // 1. Fetch Ingredients (for the dropdowns)
   useEffect(() => {
@@ -1175,6 +1176,34 @@ const Recipes: React.FC<Props> = ({ userId }) => {
           </h3>
         </div>
 
+        {/* Search Field */}
+        {savedRecipes.length > 0 && (
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-brown/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={recipeSearchTerm}
+              onChange={(e) => setRecipeSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-brand-brown/15 focus:outline-none focus:ring-2 focus:ring-brand-accent/40 text-brand-brown bg-brand-beige/30 placeholder-brand-brown/35 text-sm transition-all"
+              placeholder="Buscar receta..."
+            />
+            {recipeSearchTerm && (
+              <button
+                onClick={() => setRecipeSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-brand-brown/40 hover:text-brand-brown transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+
         {
           savedRecipes.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-brand-brown/15">
@@ -1184,7 +1213,12 @@ const Recipes: React.FC<Props> = ({ userId }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {savedRecipes.map(recipe => (
+              {savedRecipes.filter(r => r.name.toLowerCase().includes(recipeSearchTerm.toLowerCase())).length === 0 && recipeSearchTerm ? (
+                <div className="col-span-full text-center py-8">
+                  <p className="text-brand-brown/40 italic text-sm">No se encontraron recetas para "{recipeSearchTerm}"</p>
+                </div>
+              ) : (
+              savedRecipes.filter(r => r.name.toLowerCase().includes(recipeSearchTerm.toLowerCase())).map(recipe => (
                 <div key={recipe.id} className={`bg-white p-5 rounded-2xl shadow-sm border ${recipe.showInCatalog ? 'border-green-300/60 shadow-green-100/50' : 'border-brand-brown/8'} flex flex-col justify-between card-hover-lift`}>
                   <div>
                     <div className="flex justify-between items-start mb-2">
@@ -1255,7 +1289,7 @@ const Recipes: React.FC<Props> = ({ userId }) => {
                     </button>
                   </div>
                 </div>
-              ))}
+            )))}
             </div>
           )
         }
