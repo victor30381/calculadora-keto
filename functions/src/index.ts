@@ -225,6 +225,11 @@ export const notifyNewOrderTelegram = onDocumentCreated(
       return;
     }
 
+    if (order.source !== "catalog") {
+      logger.info(`Order ${snapshot.id} source is ${order.source}, skipping Telegram notification`);
+      return;
+    }
+
     try {
       // Get user profile to find Telegram Chat ID
       const profileDoc = await db.collection("userProfiles").doc(userId).get();
