@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
 import { defineSecret } from "firebase-functions/params";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -389,6 +390,248 @@ A partir de ahora vas a recibir una notificación acá cada vez que entre un ped
       if (error instanceof HttpsError) throw error;
       logger.error("Error sending test Telegram notification:", error);
       throw new HttpsError("internal", "No se pudo enviar la notificación de prueba.");
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════
+// SEND PRODUCTION SUMMARY VIA TELEGRAM (CALLABLE)
+// ═══════════════════════════════════════════════════════
+export const sendProductionSummaryTelegram = onCall(
+  {
+    secrets: [telegramBotToken],
+    cors: true,
+  },
+  async (request) => {
+    const { chatId, dateText, items, customText } = request.data || {};
+    const targetChatId = chatId || "1132926193";
+
+    try {
+      const token = telegramBotToken.value();
+      if (!token) {
+        throw new HttpsError("failed-precondition", "Token de bot de Telegram no configurado.");
+      }
+
+      let message = customText;
+
+      if (!message) {
+        const parts: string[] = [
+          `👩‍🍳 *Resumen de Producción*`,
+          `📅 *Fecha:* ${escapeMarkdown(dateText || new Date().toLocaleDateString("es-AR"))}`,
+          `━━━━━━━━━━━━━━━━━━━━━`,
+        ];
+
+        if (Array.isArray(items) && items.length > 0) {
+          parts.push(`📦 *A elaborar (${items.length} productos):*`);
+          items.forEach((item: any) => {
+            parts.push(`  • *${escapeMarkdown(item.name)}:* ${item.total} un`);
+          });
+
+          // Client breakdown
+          const hasClients = items.some((item: any) => Array.isArray(item.clients) && item.clients.length > 0);
+          if (hasClients) {
+            parts.push(``);
+            parts.push(`👥 *Detalle de clientes:*`);
+            items.forEach((item: any) => {
+              if (Array.isArray(item.clients) && item.clients.length > 0) {
+                const clientsList = item.clients.map((c: any) => `${escapeMarkdown(c.name)} (x${c.qty})`).join(", ");
+                parts.push(`  • *${escapeMarkdown(item.name)}:* ${clientsList}`);
+              }
+            });
+          }
+        } else {
+          parts.push(`ℹ️ _No hay producción programada para esta fecha._`);
+        }
+
+        parts.push(`━━━━━━━━━━━━━━━━━━━━━`);
+        parts.push(`✨ _Enviado desde Alternativa Keto Admin_`);
+        message = parts.join("\n");
+      }
+
+      const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
+      const response = await fetch(telegramUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: targetChatId,
+          text: message,
+          parse_mode: "Markdown",
+        }),
+      });
+
+      const result = await response.json();
+      if (!result.ok) {
+        logger.error("Telegram API error:", result);
+        throw new HttpsError("internal", `Error de Telegram: ${result.description || "Error desconocido"}`);
+      }
+
+      logger.info(`Production summary sent successfully to chat ${targetChatId}`);
+      return { success: true, message: "Resumen de producción enviado correctamente por Telegram." };
+    } catch (error: any) {
+      if (error instanceof HttpsError) throw error;
+      logger.error("Error sending production summary to Telegram:", error);
+      throw new HttpsError("internal", error.message || "Error al enviar a Telegram.");
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════
+// DAILY 5 AM BUENOS AIRES PRODUCTION SUMMARY (CRON)
+// ═══════════════════════════════════════════════════════
+export const dailyProductionSummaryTelegram = onSchedule(
+  {
+    schedule: "0 5 * * *",
+    timeZone: "America/Argentina/Buenos_Aires",
+    secrets: [telegramBotToken],
+  },
+  async () => {
+    logger.info("Executing daily 5 AM Buenos Aires production summary job");
+    const targetChatId = "1132926193";
+
+    try {
+      const token = telegramBotToken.value();
+      if (!token) {
+        logger.warn("Telegram bot token not configured, skipping daily job");
+        return;
+      }
+
+      // Calculate today's date in Buenos Aires (UTC-3)
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Argentina/Buenos_Aires",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const [baYear, baMonth, baDay] = formatter.format(now).split("-").map(Number);
+      const displayDate = `${String(baDay).padStart(2, "0")}/${String(baMonth).padStart(2, "0")}/${baYear}`;
+
+      // Fetch all orders
+      const ordersSnap = await db.collection("orders").get();
+      const allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+      // Filter orders for today in Buenos Aires
+      const todaysOrders = allOrders.filter(order => {
+        if (!order.deliveryDate) return false;
+        const d = order.deliveryDate.toDate ? order.deliveryDate.toDate() : new Date(order.deliveryDate);
+        const orderDateStr = formatter.format(d);
+        return orderDateStr === `${baYear}-${String(baMonth).padStart(2, "0")}-${String(baDay).padStart(2, "0")}`;
+      });
+
+      // Fetch all recipes (to decompose promos)
+      const recipesSnap = await db.collection("recipes").get();
+      const recipes = recipesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+      const findRecipe = (item: any) => {
+        return recipes.find(r => 
+          (item.recipeId && r.id === item.recipeId) ||
+          (item.id && r.id === item.id) ||
+          (r.name && item.name && r.name.trim().toLowerCase() === item.name.trim().toLowerCase())
+        );
+      };
+
+      const decomposeItem = (
+        name: string,
+        quantity: number,
+        itemMeta: any,
+        visited: Set<string> = new Set()
+      ): { name: string; qty: number; fromPromo?: string }[] => {
+        const recipe = findRecipe(itemMeta || { name });
+        if (
+          recipe &&
+          (recipe.isPromo || (recipe.promoItems && recipe.promoItems.length > 0)) &&
+          recipe.promoItems &&
+          recipe.promoItems.length > 0 &&
+          !visited.has(recipe.id)
+        ) {
+          const nextVisited = new Set(visited);
+          nextVisited.add(recipe.id);
+          const result: { name: string; qty: number; fromPromo?: string }[] = [];
+          for (const pItem of recipe.promoItems) {
+            const subRecipe = recipes.find(r => r.id === pItem.recipeId);
+            const subName = subRecipe?.name || "Producto";
+            const multiplier = typeof pItem.quantityUsed === "number" && pItem.quantityUsed > 0 ? pItem.quantityUsed : 1;
+            const subQty = multiplier * quantity;
+            if (subRecipe && (subRecipe.isPromo || (subRecipe.promoItems && subRecipe.promoItems.length > 0))) {
+              result.push(...decomposeItem(subName, subQty, subRecipe, nextVisited));
+            } else {
+              result.push({ name: subName, qty: subQty, fromPromo: recipe.name });
+            }
+          }
+          return result;
+        }
+        return [{ name, qty: quantity }];
+      };
+
+      // Group items and collect client details
+      const summary: Record<string, { total: number; clients: { name: string; qty: number }[] }> = {};
+      todaysOrders.forEach(order => {
+        if (!Array.isArray(order.items)) return;
+        order.items.forEach((item: any) => {
+          const decomposed = decomposeItem(item.name, item.quantity || 1, item);
+          decomposed.forEach(prod => {
+            if (!summary[prod.name]) {
+              summary[prod.name] = { total: 0, clients: [] };
+            }
+            summary[prod.name].total += prod.qty;
+            const clientLabel = prod.fromPromo
+              ? `${order.clientName || "Cliente"} (${prod.fromPromo})`
+              : (order.clientName || "Cliente");
+            const existing = summary[prod.name].clients.find(c => c.name === clientLabel);
+            if (existing) {
+              existing.qty += prod.qty;
+            } else {
+              summary[prod.name].clients.push({ name: clientLabel, qty: prod.qty });
+            }
+          });
+        });
+      });
+
+      const items = Object.entries(summary);
+
+      // Build message
+      const parts: string[] = [
+        `🌅 *¡BUEN DÍA! RESUMEN DE PRODUCCIÓN (5:00 AM)*`,
+        `📅 *Fecha:* ${escapeMarkdown(displayDate)}`,
+        `━━━━━━━━━━━━━━━━━━━━━`,
+      ];
+
+      if (items.length > 0) {
+        parts.push(`📦 *Total a producir hoy (${items.length} productos):*`);
+        items.forEach(([name, data]) => {
+          parts.push(`  • *${escapeMarkdown(name)}:* ${data.total} un`);
+        });
+
+        parts.push(``);
+        parts.push(`👥 *Detalle de clientes:*`);
+        items.forEach(([name, data]) => {
+          const clientsList = data.clients.map(c => `${escapeMarkdown(c.name)} (x${c.qty})`).join(", ");
+          parts.push(`  • *${escapeMarkdown(name)}:* ${clientsList}`);
+        });
+      } else {
+        parts.push(`ℹ️ _No hay pedidos programados para producir el día de hoy._`);
+      }
+
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━`);
+      parts.push(`✨ ¡Excelente jornada de cocina en Alternativa Keto!`);
+
+      const message = parts.join("\n");
+
+      // Send to target chat ID 1132926193
+      const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
+      await fetch(telegramUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: targetChatId,
+          text: message,
+          parse_mode: "Markdown",
+        }),
+      });
+
+      logger.info(`Daily 5 AM production summary sent to ${targetChatId}`);
+    } catch (error) {
+      logger.error("Error in dailyProductionSummaryTelegram:", error);
     }
   }
 );

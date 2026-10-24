@@ -125,7 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, onEditOrder, onViewOrder,
             </div>
 
             {/* Production Summary Row */}
-            <ProductionSummary orders={orders} />
+            <ProductionSummary orders={orders} recipes={recipes} />
         </div>
     );
 };
