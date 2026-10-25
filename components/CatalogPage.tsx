@@ -104,6 +104,7 @@ const ProductCard: React.FC<{
     onUpdateQuantity: (recipeId: string, qty: number) => void;
 }> = ({ recipe, inCart, onAddToCart, onUpdateQuantity }) => {
     const [isFlipped, setIsFlipped] = useState(false);
+    const hasValidPrice = typeof recipe.catalogPrice === 'number' && recipe.catalogPrice > 0;
 
     return (
         <div className="relative group w-full h-full perspective-[1200px]">
@@ -123,9 +124,13 @@ const ProductCard: React.FC<{
                             images={recipe.catalogImages && recipe.catalogImages.length > 0 ? recipe.catalogImages : (recipe.catalogImage ? [recipe.catalogImage] : [])} 
                             alt={recipe.name} 
                         />
-                        {recipe.catalogPrice !== undefined && (
+                        {hasValidPrice ? (
                             <div className="absolute top-3.5 right-3.5 z-20 bg-white/95 backdrop-blur-md text-brand-brown font-serif font-black text-base md:text-lg px-3.5 py-1 rounded-2xl shadow-[0_4px_16px_rgba(93,58,41,0.12)] border border-white/80">
-                                ${recipe.catalogPrice.toLocaleString()}
+                                ${recipe.catalogPrice!.toLocaleString()}
+                            </div>
+                        ) : (
+                            <div className="absolute top-3.5 right-3.5 z-20 bg-white/95 backdrop-blur-md text-brand-brown/70 font-bold text-xs px-3 py-1 rounded-2xl shadow-[0_4px_16px_rgba(93,58,41,0.12)] border border-white/80">
+                                Precio a consultar
                             </div>
                         )}
                         {recipe.isPromo && (
@@ -215,7 +220,7 @@ const ProductCard: React.FC<{
                                         aria-label="Aumentar cantidad"
                                     >+</button>
                                 </div>
-                            ) : (
+                            ) : hasValidPrice ? (
                                 <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); onAddToCart(recipe); }}
@@ -226,6 +231,10 @@ const ProductCard: React.FC<{
                                     </svg>
                                     <span>Agregar al Pedido</span>
                                 </button>
+                            ) : (
+                                <div className="w-full py-3.5 bg-brand-brown/5 text-brand-brown/70 text-sm font-semibold rounded-2xl flex items-center justify-center gap-2 border border-dashed border-brand-brown/20">
+                                    <span>💬</span> Precio a consultar
+                                </div>
                             )}
                         </div>
                     </div>
@@ -262,7 +271,7 @@ const ProductCard: React.FC<{
 
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-brand-brown/10" onClick={e => e.stopPropagation()}>
                         <span className="text-xl font-serif font-black text-brand-brown">
-                            ${recipe.catalogPrice?.toLocaleString() || '0'}
+                            {hasValidPrice ? `$${recipe.catalogPrice!.toLocaleString()}` : 'Consultar'}
                         </span>
                         {inCart ? (
                             <div className="flex items-center gap-2 bg-brand-cream/80 rounded-2xl p-1 border border-brand-accent/30">
@@ -278,7 +287,7 @@ const ProductCard: React.FC<{
                                     className="w-8 h-8 rounded-xl bg-white text-brand-brown font-black shadow-sm hover:bg-brand-brown/10 transition-all flex items-center justify-center active:scale-90"
                                 >+</button>
                             </div>
-                        ) : (
+                        ) : hasValidPrice ? (
                             <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onAddToCart(recipe); }}
@@ -289,6 +298,10 @@ const ProductCard: React.FC<{
                                 </svg>
                                 <span>Agregar</span>
                             </button>
+                        ) : (
+                            <span className="py-2.5 px-5 bg-brand-brown/5 text-brand-brown/70 text-sm font-semibold rounded-2xl border border-dashed border-brand-brown/20">
+                                Consultar
+                            </span>
                         )}
                     </div>
                 </div>
@@ -298,6 +311,7 @@ const ProductCard: React.FC<{
 };
 
 const DEFAULT_WHATSAPP = '5491132427375';
+const CART_STORAGE_KEY = 'alternativa-keto-cart';
 
 const formatWhatsappDisplay = (phone: string) => {
     const raw = phone || DEFAULT_WHATSAPP;
@@ -318,6 +332,10 @@ const getCleanWhatsappNumber = (phone: string) => {
     return (phone || DEFAULT_WHATSAPP).replace(/\D/g, '');
 };
 
+// Normaliza texto para búsquedas: minúsculas y sin acentos (ej. "budin" encuentra "Budín").
+const normalizeText = (value: string) =>
+    (value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState(true);
@@ -331,9 +349,41 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeSection, setActiveSection] = useState<string | null>(null);
 
-    // Cart state
-    const [cart, setCart] = useState<CartItem[]>([]);
+    // Cart state (persistido en localStorage para sobrevivir a las recargas)
+    const [cart, setCart] = useState<CartItem[]>(() => {
+        try {
+            const raw = localStorage.getItem(CART_STORAGE_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+        } catch {
+            return [];
+        }
+    });
     const [showCart, setShowCart] = useState(false);
+
+    // Guardar el carrito en localStorage cada vez que cambia
+    useEffect(() => {
+        try {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+        } catch {
+            // Ignorar errores de cuota o serialización
+        }
+    }, [cart]);
+
+    // Reconciliar el carrito con las recetas frescas (precios actualizados y quitar las que ya no están publicadas)
+    useEffect(() => {
+        if (loading) return;
+        setCart(prev => {
+            const byId = new Map<string, Recipe>(recipes.map(r => [r.id, r] as [string, Recipe]));
+            const next: CartItem[] = [];
+            for (const item of prev) {
+                const fresh = byId.get(item.recipe.id);
+                if (fresh) next.push({ ...item, recipe: fresh });
+            }
+            return next;
+        });
+    }, [recipes, loading]);
 
     // Checkout state
     const [showCheckout, setShowCheckout] = useState(false);
@@ -446,7 +496,9 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
                 cost: item.recipe.isPromo ? (item.recipe.totalCost * item.quantity) : ((item.recipe.totalYieldWeight || 0) * item.recipe.costPerGram * item.quantity),
             }));
 
-            await addDoc(collection(db, 'orders'), {
+            // Iniciamos la escritura SIN await para poder abrir WhatsApp de forma
+            // síncrona (dentro del gesto del usuario) y evitar que el navegador lo bloquee.
+            const orderPromise = addDoc(collection(db, 'orders'), {
                 userId,
                 clientId: '',
                 clientName: clientName.trim(),
@@ -487,6 +539,8 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
                 
                 window.open(`https://wa.me/${activeWhatsapp}?text=${text}`, '_blank');
             }
+
+            await orderPromise;
 
             setOrderSuccess(true);
             setCart([]);
@@ -635,9 +689,9 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
             <div className="fixed top-0 left-0 w-full bg-[#422A1D] text-[#FDFBF7] border-b border-[#D4A373]/30 py-2 overflow-hidden flex shadow-md z-[60] pointer-events-none">
                 <div className="animate-marquee flex items-center font-bold text-[10px] md:text-xs tracking-[0.25em] uppercase whitespace-nowrap text-yellow-100/95">
                     <span className="mx-6 md:mx-10 flex items-center gap-2"><span>✦</span> Reserva tu pedido con 24 hs de anticipación <span>✦</span></span>
-                    <span className="mx-6 md:mx-10 flex items-center gap-2"><span>✦</span> Pastelería 100% Keto libre de azúcares <span>✦</span></span>
                     <span className="mx-6 md:mx-10 flex items-center gap-2"><span>✦</span> Reserva tu pedido con 24 hs de anticipación <span>✦</span></span>
-                    <span className="mx-6 md:mx-10 flex items-center gap-2"><span>✦</span> Elaboración artesanal en Berazategui <span>✦</span></span>
+                    <span className="mx-6 md:mx-10 flex items-center gap-2"><span>✦</span> Reserva tu pedido con 24 hs de anticipación <span>✦</span></span>
+                    <span className="mx-6 md:mx-10 flex items-center gap-2"><span>✦</span> Reserva tu pedido con 24 hs de anticipación <span>✦</span></span>
                     <span className="mx-6 md:mx-10 flex items-center gap-2"><span>✦</span> Reserva tu pedido con 24 hs de anticipación <span>✦</span></span>
                 </div>
             </div>
@@ -736,21 +790,6 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
                         </div>
                     </div>
 
-                    {/* Artisan Quality Seals */}
-                    <div className="mt-8 pt-6 border-t border-brand-brown/10 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs font-bold text-brand-brown/80">
-                        <div className="flex items-center gap-2 bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border border-white/80 shadow-xs">
-                            <span className="text-sm">🌱</span>
-                            <span>Sin Azúcar Agregada</span>
-                        </div>
-                        <div className="flex items-center gap-2 bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border border-white/80 shadow-xs">
-                            <span className="text-sm">🧁</span>
-                            <span>Harinas Puras de Almendras</span>
-                        </div>
-                        <div className="flex items-center gap-2 bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border border-white/80 shadow-xs">
-                            <span className="text-sm">❤️</span>
-                            <span>Apto Diabéticos & Keto</span>
-                        </div>
-                    </div>
                 </div>
             </header>
 
@@ -773,7 +812,7 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
                             </svg>
                             <input
                                 type="text"
-                                placeholder="Buscar delicias keto por nombre o ingrediente..."
+                                placeholder="Buscar por nombre, descripción o categoría..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                                 className="w-full pl-11 pr-10 py-3 rounded-2xl border border-brand-brown/12 bg-white/95 outline-none text-brand-brown placeholder-brand-brown/40 font-medium text-sm transition-all focus:border-brand-accent/60 focus:ring-4 focus:ring-brand-accent/15 focus:bg-white shadow-xs"
@@ -850,12 +889,11 @@ const CatalogPage: React.FC<CatalogPageProps> = ({ userId }) => {
                         {(() => {
                             let filteredRecipes = recipes;
 
-                            // Apply text search
+                            // Apply text search (insensible a mayúsculas y acentos)
                             if (searchQuery.trim()) {
-                                const q = searchQuery.toLowerCase();
-                                filteredRecipes = filteredRecipes.filter(r => 
-                                    r.name.toLowerCase().includes(q) || 
-                                    (r.catalogDescription && r.catalogDescription.toLowerCase().includes(q))
+                                const q = normalizeText(searchQuery);
+                                filteredRecipes = filteredRecipes.filter(r =>
+                                    normalizeText([r.name, r.catalogDescription || '', r.catalogSection || ''].join(' ')).includes(q)
                                 );
                             }
 

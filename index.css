@@ -108,9 +108,10 @@
 }
 
 .animate-marquee {
-  display: inline-block;
+  display: flex;
+  width: max-content;
   white-space: nowrap;
-  animation: marquee 30s linear infinite;
+  animation: marquee 45s linear infinite;
   will-change: transform;
 }
 
