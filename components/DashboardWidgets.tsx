@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Order, Recipe } from '../types';
-import { db, functions } from '../firebase';
+import { db } from '../firebase';
 import { doc, updateDoc, deleteDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
 
 
 
@@ -603,10 +602,6 @@ export const ProductionSummary: React.FC<ProductionSummaryProps> = ({ orders, re
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [crossedOutItems, setCrossedOutItems] = useState<Set<string>>(new Set());
     const [fetchedRecipes, setFetchedRecipes] = useState<Recipe[]>([]);
-    const [isSendingTelegram, setIsSendingTelegram] = useState(false);
-    const [telegramFeedback, setTelegramFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-    const [showTelegramModal, setShowTelegramModal] = useState(false);
-    const [telegramModalError, setTelegramModalError] = useState<string | null>(null);
     const [copiedToClipboard, setCopiedToClipboard] = useState(false);
 
     useEffect(() => {
@@ -741,221 +736,36 @@ export const ProductionSummary: React.FC<ProductionSummaryProps> = ({ orders, re
 
     const items: [string, { total: number, clients: { name: string, qty: number }[] }][] = Object.entries(summary);
 
-    const buildSummaryTelegramMessage = () => {
+    // Construye la lista para copiar: "cantidad + nombre", ordenada alfabéticamente.
+    const buildProductionListText = () => {
         const dateStr = `${String(selectedDate.getDate()).padStart(2, '0')}/${String(selectedDate.getMonth() + 1).padStart(2, '0')}/${selectedDate.getFullYear()}`;
-        const parts: string[] = [
-            `👩‍🍳 *Resumen de Producción (Alternativa Keto)*`,
-            `📅 *Fecha:* ${dateStr}`,
-            `━━━━━━━━━━━━━━━━━━━━━`,
-        ];
-
-        if (items.length > 0) {
-            parts.push(`📦 *A elaborar (${items.length} producto${items.length !== 1 ? 's' : ''}):*`);
-            items.forEach(([name, data]) => {
-                parts.push(`  • *${name}:* ${data.total} un`);
-            });
-
-            const hasClients = items.some(([_, data]) => data.clients.length > 0);
-            if (hasClients) {
-                parts.push(``);
-                parts.push(`👥 *Detalle de clientes:*`);
-                items.forEach(([name, data]) => {
-                    if (data.clients.length > 0) {
-                        const clientsList = data.clients.map(c => `${c.name} (x${c.qty})`).join(', ');
-                        parts.push(`  • *${name}:* ${clientsList}`);
-                    }
-                });
-            }
-        } else {
-            parts.push(`ℹ️ _No hay producción programada para esta fecha._`);
-        }
-
-        parts.push(`━━━━━━━━━━━━━━━━━━━━━`);
-        parts.push(`✨ Alternativa Keto`);
-        return parts.join('\n');
+        const sorted = [...items].sort((a, b) => a[0].localeCompare(b[0], 'es'));
+        const lines = sorted.map(([name, data]) => `${data.total} ${name}`);
+        return [`👩‍🍳 Producción ${dateStr}`, ...lines].join('\n');
     };
 
-    const handleCopySummary = async () => {
+    const handleCopyProductionList = async () => {
+        const text = buildProductionListText();
         try {
-            await navigator.clipboard.writeText(buildSummaryTelegramMessage());
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
             setCopiedToClipboard(true);
             setTimeout(() => setCopiedToClipboard(false), 2500);
         } catch (e) {
-            console.error('Failed to copy to clipboard', e);
+            console.error('Error al copiar la lista:', e);
         }
     };
-
-    const handleOpenTelegramDirect = () => {
-        const text = encodeURIComponent(buildSummaryTelegramMessage());
-        window.open(`https://t.me/share/url?url=&text=${text}`, '_blank');
-    };
-
-    const handleSendTelegramSummary = async () => {
-        setIsSendingTelegram(true);
-        setTelegramFeedback(null);
-        try {
-            const formattedItems = items.map(([name, data]) => ({
-                name,
-                total: data.total,
-                clients: data.clients
-            }));
-
-            const dateStr = `${String(selectedDate.getDate()).padStart(2, '0')}/${String(selectedDate.getMonth() + 1).padStart(2, '0')}/${selectedDate.getFullYear()}`;
-
-            const sendFn = httpsCallable(functions, 'sendProductionSummaryTelegram');
-            await sendFn({
-                chatId: '1132926193',
-                dateText: dateStr,
-                items: formattedItems
-            });
-
-            setTelegramFeedback({ type: 'success', text: '¡Enviado a Telegram!' });
-            setTelegramModalError(null);
-        } catch (error: any) {
-            console.error('Error sending summary to Telegram:', error);
-            const errMsg = error?.message || '';
-            const isNotFound = error?.code === 'functions/not-found' || error?.code === 'not-found' || errMsg.includes('NOT_FOUND') || errMsg.includes('not found') || errMsg.includes('404');
-            const isBotBlocked = errMsg.includes('chat not found') || errMsg.includes('bot was blocked');
-
-            let explanation = '';
-            if (isNotFound) {
-                explanation = 'La Cloud Function aún no está desplegada en Firebase. Para que Google envíe el mensaje de forma automática y active el reporte diario de las 5:00 AM, ejecuta en tu terminal: firebase deploy --only functions';
-                setTelegramFeedback({ type: 'error', text: 'Función no desplegada' });
-            } else if (isBotBlocked) {
-                explanation = 'El bot @Alternativa_keto_bot aún no tiene permiso para escribirle al Chat ID 1132926193. Abre Telegram, busca @Alternativa_keto_bot y presiona /start.';
-                setTelegramFeedback({ type: 'error', text: 'Inicia @Alternativa_keto_bot' });
-            } else {
-                explanation = `Error al conectar con Telegram: ${errMsg || 'Error de conexión'}`;
-                setTelegramFeedback({ type: 'error', text: 'Error al enviar' });
-            }
-
-            setTelegramModalError(explanation);
-            setShowTelegramModal(true);
-        } finally {
-            setIsSendingTelegram(false);
-            setTimeout(() => setTelegramFeedback(null), 6000);
-        }
-    };
-
-    const telegramModalContent = showTelegramModal && (
-        <div 
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-            onClick={() => setShowTelegramModal(false)}
-        >
-            <div 
-                className="glass-card-strong bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-brand-brown/15 p-5 sm:p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-brand-brown/10 pb-3">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-[#229ED9] text-white flex items-center justify-center shadow-md">
-                            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.458c.538-.196 1.006.128.832.941z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4 className="font-serif font-bold text-brand-brown text-base sm:text-lg">
-                                Enviar Resumen a Telegram
-                            </h4>
-                            <p className="text-xs text-brand-brown/60">
-                                Producción del {selectedDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => setShowTelegramModal(false)}
-                        className="text-stone-400 hover:text-brand-brown w-8 h-8 rounded-full hover:bg-brand-brown/5 flex items-center justify-center transition-colors text-lg"
-                    >
-                        ✕
-                    </button>
-                </div>
-
-                {/* Error Banner if any */}
-                {telegramModalError && (
-                    <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs sm:text-sm space-y-2">
-                        <div className="flex items-start gap-2 font-bold text-amber-800">
-                            <span className="text-base">⚠️</span>
-                            <span>{telegramModalError}</span>
-                        </div>
-                        {telegramModalError.includes('firebase deploy') && (
-                            <div className="bg-amber-100/70 p-2 rounded-lg font-mono text-[11px] text-amber-950 flex items-center justify-between border border-amber-300/60">
-                                <code>firebase deploy --only functions</code>
-                                <button 
-                                    type="button"
-                                    onClick={() => navigator.clipboard.writeText('firebase deploy --only functions')}
-                                    className="px-2 py-0.5 bg-white text-amber-800 font-sans font-bold rounded text-[10px] shadow-sm hover:bg-amber-50"
-                                >
-                                    Copiar
-                                </button>
-                            </div>
-                        )}
-                        {telegramModalError.includes('@Alternativa_keto_bot') && (
-                            <div className="pt-1">
-                                <a 
-                                    href="https://t.me/Alternativa_keto_bot" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-[#229ED9] underline font-bold hover:text-[#1d8bc0]"
-                                >
-                                    👉 Abrir @Alternativa_keto_bot y enviar /start
-                                </a>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                    <button
-                        type="button"
-                        onClick={handleOpenTelegramDirect}
-                        className="w-full py-2.5 px-3 bg-[#229ED9] hover:bg-[#1d8bc0] text-white rounded-xl shadow-md font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                    >
-                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.458c.538-.196 1.006.128.832.941z"/>
-                        </svg>
-                        <span>Abrir en Telegram (resumen listo)</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={handleCopySummary}
-                        className="w-full py-2.5 px-3 bg-white/80 hover:bg-white border border-brand-brown/15 hover:border-brand-brown/30 text-brand-brown rounded-xl shadow-sm font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                    >
-                        <span>{copiedToClipboard ? '✅ ¡Copiado!' : '📋 Copiar texto del resumen'}</span>
-                    </button>
-                </div>
-
-                {/* Preview Box */}
-                <div>
-                    <label className="block text-[11px] font-bold text-brand-brown/60 uppercase tracking-wider mb-1.5">
-                        Vista previa del mensaje:
-                    </label>
-                    <div className="bg-stone-50 border border-brand-brown/10 rounded-xl p-3 max-h-48 overflow-y-auto text-xs font-mono text-brand-brown/90 whitespace-pre-wrap leading-relaxed custom-scrollbar select-text">
-                        {buildSummaryTelegramMessage()}
-                    </div>
-                </div>
-
-                {/* Bottom Footer Details */}
-                <div className="pt-2 border-t border-brand-brown/10 flex flex-col sm:flex-row items-start sm:items-center justify-between text-[11px] text-brand-brown/60 gap-2">
-                    <div className="flex items-center gap-1.5">
-                        <span>Destinatario:</span>
-                        <code className="font-bold text-brand-brown bg-stone-100 px-1.5 py-0.5 rounded">1132926193</code>
-                        <span>(@Alternativa_keto_bot)</span>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleSendTelegramSummary}
-                        disabled={isSendingTelegram}
-                        className="text-[#229ED9] hover:underline font-bold disabled:opacity-50"
-                    >
-                        {isSendingTelegram ? 'Reintentando...' : '🔄 Reintentar Cloud Function'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <div className="glass-card rounded-2xl p-4 sm:p-6 w-full relative animate-fade-in-up">
@@ -971,51 +781,25 @@ export const ProductionSummary: React.FC<ProductionSummaryProps> = ({ orders, re
                         value={formatDateForInput(selectedDate)}
                         onChange={handleDateChange}
                     />
-                    <div className="flex items-center gap-1">
-                        <button
-                            type="button"
-                            onClick={handleSendTelegramSummary}
-                            disabled={isSendingTelegram}
-                            title="Enviar resumen de producción por Telegram a 1132926193"
-                            className="p-2 sm:px-3 sm:py-2 bg-[#229ED9] hover:bg-[#1d8bc0] text-white rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 font-bold text-xs active:scale-95 disabled:opacity-50"
-                            aria-label="Enviar resumen a Telegram"
-                        >
-                            {isSendingTelegram ? (
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            ) : (
-                                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.458c.538-.196 1.006.128.832.941z"/>
+                    <button
+                        type="button"
+                        onClick={handleCopyProductionList}
+                        disabled={items.length === 0}
+                        title="Copiar lista de producción"
+                        aria-label="Copiar lista de producción"
+                        className="p-2 sm:px-3 sm:py-2 bg-brand-brown hover:bg-[#5D4229] text-white rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 font-bold text-xs active:scale-95 disabled:opacity-50"
+                    >
+                        {copiedToClipboard ? (
+                            <span>✅ ¡Copiado!</span>
+                        ) : (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
-                            )}
-                            <span className="hidden sm:inline">Telegram</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setTelegramModalError(null);
-                                setShowTelegramModal(true);
-                            }}
-                            title="Ver opciones de compartir y previsualizar mensaje de Telegram"
-                            className="p-2 bg-white/70 hover:bg-white text-brand-brown border border-brand-brown/10 rounded-xl shadow-sm hover:shadow transition-all text-xs font-bold flex items-center justify-center"
-                            aria-label="Opciones de Telegram"
-                        >
-                            📋
-                        </button>
-                    </div>
-                    {telegramFeedback && (
-                        <button
-                            type="button"
-                            onClick={() => setShowTelegramModal(true)}
-                            title="Click para ver más detalles y opciones de envío"
-                            className={`text-xs font-bold px-2.5 py-1 rounded-lg animate-fade-in cursor-pointer hover:opacity-90 transition-opacity ${
-                                telegramFeedback.type === 'success' 
-                                    ? 'bg-emerald-100 text-emerald-800' 
-                                    : 'bg-red-100 text-red-800 border border-red-200'
-                            }`}
-                        >
-                            {telegramFeedback.text} {telegramFeedback.type === 'error' && '🔍'}
-                        </button>
-                    )}
+                                <span>Copiar lista</span>
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
 
@@ -1087,9 +871,6 @@ export const ProductionSummary: React.FC<ProductionSummaryProps> = ({ orders, re
                     onClick={() => setExpandedItem(null)}
                 ></div>
             )}
-
-            {/* Telegram Summary Modal */}
-            {showTelegramModal && createPortal(telegramModalContent, document.body)}
         </div>
     );
 };
